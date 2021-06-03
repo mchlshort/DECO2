@@ -1,8 +1,26 @@
+'''
+Created on 3rd June 2021
+
+Energy Planning Scenario in Pyomo
+
+This script presents the mathematical formulation for an energy planning 
+scenario in a specific geographical region or district. Renewable energy 
+sources and fossil-based source such as coal, oil and natural gas, 
+each with its respectively energy contribution and carbon intensity make up 
+the power generation in a specific region or district. Each period consists 
+of its respective energy demand and carbon emission limit. 
+NETs are utilised to achieve the emission limit.
+
+@author: Purusothmn, Dr Michael Short
+'''
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 import pandas as pd
 import matplotlib.pyplot as plt
 
+'''
+source_period_[Period Number] represents the energy data for [Period Number]
+'''
 source_period_1 = {
     'Renewables'  : {'Energy' : 18.0,
                     'CI' : 0},
@@ -36,6 +54,10 @@ source_period_3 = {
                     'CI' : 1}    
     }
 
+'''
+data_period_[Period Number] represents the period data for [Period Number]
+i.e. total demand, emission limit, CCS data
+'''
 data_period_1 = {
         'Constraints' : {'Demand' : 60,
                          'Emission_limit' : 15,
@@ -60,6 +82,16 @@ data_period_3 = {
                          'X': 0.15}      
     }
 
+'''
+Creating a fuction to define the energy planning model
+
+Args:
+    source_data = The energy and carbon intensity for [Period Number] 
+    period_data = The energy planning data for [Period Number]
+    
+returns:
+    the energy planning model with all variables, constraints and objective function
+'''
 def EP_Period(source_data,period_data):
     S = source_data.keys()
     model = pyo.ConcreteModel()
@@ -113,6 +145,7 @@ def EP_Period(source_data,period_data):
     model.cons.add(sum((model.net_energy[s] * source_data[s]['CI']) + (model.net_energy_CCS[s] * model.CI_RET[s]) for s in S)
                + (model.NET * period_data['Constraints']['NET_CI']) == period_data['Constraints']['Emission_limit'])
     
+    #Determines the cumulative extent of CCS retrofit from all fossil-based sources
     model.cons.add(model.sum_CCS == sum(model.CCS[s] for s in S))
     
     return model
@@ -133,8 +166,10 @@ EP[block_sets[2]] = model_3
 
 Full_model = pyo.ConcreteModel()
 
-#This function defines each block - the block is model m containing all equations and variables
-#It needs to be put in the right set (block_sets) with objective function turned off
+'''
+This function defines each block - the block is model m containing all equations and variables
+It needs to be put in the right set (block_sets) with objective function turned off
+'''
 def build_individual_blocks(model, block_sets):
     model = EP[block_sets]
     model.obj.deactivate()
@@ -143,14 +178,32 @@ def build_individual_blocks(model, block_sets):
 #Defining the pyomo block structure with the set block sets and rule to build the blocks
 Full_model.subprobs = pyo.Block(block_sets, rule = build_individual_blocks)
 
-
+'''
+Creating a new objective function for the new model
+The objective minimises the cumulative extent of CCS retrofit from all fossil-based sources
+'''
 Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].sum_CCS +
                                Full_model.subprobs['P2'].sum_CCS +
                                Full_model.subprobs['P3'].sum_CCS, 
                                sense = pyo.minimize)
 
+#Using ipopt solver to solve the energy planning model
 opt = SolverFactory('ipopt')
 opt.solve(Full_model)
+
+'''
+Creating a fuction to publish the results energy planning scenario for a single period
+
+Args:
+    source_data = The energy and carbon intensity for [Period Number] 
+    period_data = The energy planning data for [Period Number]
+    period = Time period involved ('P1' or 'P2' or 'P3')
+    
+returns:
+    the results from variables in the energy planning model, 
+    a data table with the energy and emission contribution from each energy source,
+    and energy planning pinch diagram
+'''
 
 def EP_Results(source_data, period_data, period):
     model = Full_model.subprobs[period]
