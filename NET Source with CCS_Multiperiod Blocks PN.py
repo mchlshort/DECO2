@@ -190,6 +190,10 @@ def EP_Period(source_data,period_data):
     
     model.cons.add(model.CCS['Plant_1'] == 0)
     
+    model.cons.add(model.B[s] <= 1)
+    
+    model.cons.add(model.B[s] >= 0)
+    
     return model
 
 #Specifying the data for each model as an argument
@@ -232,7 +236,7 @@ Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].sum_CCS +
 #Using ipopt solver to solve the energy planning model
 opt = SolverFactory('ipopt')
 opt.solve(Full_model)
-
+Full_model.pprint()
 '''
 Creating a fuction to publish the results energy planning scenario for a single period
 
@@ -361,6 +365,7 @@ def EP_Results(source_data, period_data, period):
     plt.legend()
     '''
     return    
+
 
 EP_Results(source_period_1, data_period_1, 'P1')
 #EP_Results(source_period_2, data_period_2, 'P2')
