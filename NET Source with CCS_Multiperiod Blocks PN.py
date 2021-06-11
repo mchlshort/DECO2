@@ -147,7 +147,7 @@ def EP_Period(source_data,period_data):
     #OBJECTIVE FUNCTION
     
     #The objective function minimises the cumulative extent of CCS retrofit, thus minimising the NET requirement
-    model.obj = pyo.Objective(expr = model.sum_CCS, sense = pyo.minimize)
+    model.obj = pyo.Objective(expr = model.NET, sense = pyo.minimize)
    
     #CONSTRAINTS
 
@@ -228,9 +228,9 @@ Full_model.subprobs = pyo.Block(block_sets, rule = build_individual_blocks)
 Creating a new objective function for the new model
 The objective minimises the cumulative extent of CCS retrofit from all fossil-based sources
 '''
-Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].sum_CCS +
-                               Full_model.subprobs['P2'].sum_CCS +
-                               Full_model.subprobs['P3'].sum_CCS, 
+Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].NET +
+                               Full_model.subprobs['P2'].NET +
+                               Full_model.subprobs['P3'].NET, 
                                sense = pyo.minimize)
 
 #Using ipopt solver to solve the energy planning model
