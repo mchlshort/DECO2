@@ -17,6 +17,7 @@ NETs are utilised to achieve the emission limit.
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 import pandas as pd
+#import sys
 #import matplotlib.pyplot as plt
 
 '''
@@ -24,53 +25,53 @@ source_period_[Period Number] represents the energy data for [Period Number]
 '''
 source_period_1 = {
     'Plant_1'  : {'Energy': 18.0,
-                    'CI' : 0},
+                    'CI' : 0},                    
     'Plant_2'  : {'Energy' : 5.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                    
     'Plant_3'  : {'Energy' : 7.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                   
     'Plant_4'  : {'Energy' : 7.2,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                    
     'Plant_5'  : {'Energy' : 6.0,
-                    'CI' : 0.8},
+                    'CI' : 0.8},                   
     'Plant_6'  : {'Energy' : 8.0,
-                    'CI' : 1},
+                    'CI' : 1},                   
     'Plant_7'  : {'Energy' : 5.0,
-                    'CI' : 1},
+                    'CI' : 1},                    
     'Plant_8'  : {'Energy' : 3.8,
-                    'CI' : 1}
+                    'CI' : 1}                    
     }
 
 source_period_2 = {
      'Plant_1' : {'Energy' : 30.0,
-                    'CI' : 0},
+                    'CI' : 0},                  
     'Plant_2'  : {'Energy' : 8.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                   
     'Plant_3'  : {'Energy' : 10.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                   
     'Plant_4'  : {'Energy' : 12.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                   
     'Plant_5'  : {'Energy' : 5.0,
-                    'CI' : 0.8},
+                    'CI' : 0.8},                    
     'Plant_6'  : {'Energy' : 5.0,
-                    'CI' : 1},
+                    'CI' : 1},                    
     'Plant_7'  : {'Energy' : 5.0,
-                    'CI' : 1}   
+                    'CI' : 1}                    
     }
 
 source_period_3 = {
     'Plant_1'  : {'Energy' : 40.0,
-                    'CI' : 0},
+                    'CI' : 0},                    
     'Plant_2'  : {'Energy' : 10.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                    
     'Plant_3'  : {'Energy' : 15.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                    
     'Plant_4'  : {'Energy' : 15.0,
-                    'CI' : 0.5},
+                    'CI' : 0.5},                    
     'Plant_5'  : {'Energy' : 5.0,
-                    'CI' : 0.8},
+                    'CI' : 0.8},                    
     'Plant_6'  : {'Energy' : 5.0,
-                    'CI' : 1}    
+                    'CI' : 1}                        
     }
 
 '''
@@ -79,7 +80,7 @@ i.e. total demand, emission limit, CCS data
 '''
 data_period_1 = {
         'Constraints' : {'Demand' : 60,
-                         'Emission_Red' : 0.48,
+                         'Emission_Red' : 0.5,
                          'NET_CI' : -0.6,
                          'RR': 0.85,
                          'X': 0.15}      
@@ -126,6 +127,9 @@ def EP_Period(source_data,period_data):
     #This variable determines the CO2 emission limit for a specified period
     model.limit = pyo.Var(domain = pyo.NonNegativeReals)
     
+    #This variable determines the revised total CO2 emission after energy planning
+    model.new_emission = pyo.Var(domain = pyo.NonNegativeReals)
+    
     #This variable represents the extent of CCS retrofit for each fossil-based source
     model.CCS = pyo.Var(S, domain = pyo.NonNegativeReals)   
     
@@ -141,9 +145,8 @@ def EP_Period(source_data,period_data):
     #This variable determines the carbon intensity of each fossil-based source with CCS deployment
     model.CI_RET = pyo.Var(S, domain = pyo.NonNegativeReals)
     
-    #This variable determines the cumulative extent of CCS retrofit of all fossil-based sources
-    model.sum_CCS = pyo.Var(domain = pyo.NonNegativeReals)    
-
+    model.sum_CCS = pyo.Var(domain = pyo.NonNegativeReals)
+   
     #OBJECTIVE FUNCTION
     
     #The objective function minimises the cumulative extent of CCS retrofit, thus minimising the NET requirement
@@ -162,13 +165,7 @@ def EP_Period(source_data,period_data):
     for s in S:
         #Calculation of carbon intensity for CCS retrofitted fossil-based sources
         model.cons.add((source_data[s]['CI'] * (1 - period_data['Constraints']['RR']) / (1 - period_data['Constraints']['X'])) == model.CI_RET[s])
-        '''
-        #Determine the net energy available from fossil-based sources without CCS retrofit
-        model.cons.add(source_data[s]['Energy'] == model.net_energy[s] + model.CCS[s])
-        
-        #Determine the net energy available from fossil-based sources with CCS retrofit
-        model.cons.add((model.CCS[s] * (1 - period_data['Constraints']['X'])) == model.net_energy_CCS[s])
-        '''
+    
         #The extent of CCS retrofit on fossil-based sources should never exceed the available energy
         model.cons.add(model.CCS[s] <= source_data[s]['Energy'])
         
@@ -177,27 +174,30 @@ def EP_Period(source_data,period_data):
         
         #The summation of energy contribution from each source with and without CCS retrofit must equal to individual energy contribution
         model.cons.add((model.net_energy[s] * (1 - model.B[s])) + (model.CCS[s]* model.B[s]) == source_data[s]['Energy'])
-                   
+        
+                          
     #Total energy contribution from all energy sources to satisfy the total demand
-    model.cons.add(sum((model.net_energy[s] + model.net_energy_CCS[s]) for s in S) + model.NET == period_data['Constraints']['Demand'])
+    model.cons.add(sum(((model.net_energy[s]*(1 - model.B[s])) + (model.net_energy_CCS[s] * model.B[s])) for s in S) + model.NET == period_data['Constraints']['Demand'])
     
+    #The total CO2 load contribution from all energy sources is equivalent to the revised total CO2 emission after energy planning 
+    model.cons.add(sum((model.net_energy[s] * source_data[s]['CI'] * (1 -  model.B[s])) + (model.net_energy_CCS[s] * model.CI_RET[s] * model.B[s]) for s in S)
+               + (model.NET * period_data['Constraints']['NET_CI']) == model.new_emission)     
+   
     #Total CO2 load contribution from all energy sources to satisfy the emission limit
-    model.cons.add(sum((model.net_energy[s] * source_data[s]['CI']) + (model.net_energy_CCS[s] * model.CI_RET[s]) for s in S)
-               + (model.NET * period_data['Constraints']['NET_CI']) == model.limit)
+    model.cons.add(model.new_emission <= model.limit)     
     
-    #Determines the cumulative extent of CCS retrofit from all fossil-based sources
-    model.cons.add(model.sum_CCS == sum(model.CCS[s] for s in S))
-    
-    model.cons.add(model.CCS['Plant_1'] == 0)
-    
-    model.cons.add(model.B[s] <= 1)
-    
-    model.cons.add(model.B[s] >= 0)
+    #No CCS retrofit would be done on renewable energy power plants
+    model.CCS['Plant_1'].fix(0)   
     
     return model
 
 #Specifying the data for each model as an argument
 model_1 = EP_Period(source_period_1, data_period_1)
+#opt = SolverFactory('octeract-engine')
+#results = opt.solve(model_1)
+#print(results)
+#model_1.pprint()
+#sys.exit()
 model_2 = EP_Period(source_period_2, data_period_2)
 model_3 = EP_Period(source_period_3, data_period_3)
 
@@ -234,9 +234,9 @@ Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].NET +
                                sense = pyo.minimize)
 
 #Using ipopt solver to solve the energy planning model
-opt = SolverFactory('ipopt')
-opt.solve(Full_model)
-Full_model.pprint()
+opt = SolverFactory('octeract-engine', tee = True)
+solution_status = opt.solve(Full_model)
+print(solution_status)
 '''
 Creating a fuction to publish the results energy planning scenario for a single period
 
@@ -256,44 +256,40 @@ def EP_Results(source_data, period_data, period):
     print(' ')
     print('Time period', '=' , period)
     print(' ')
-    print('Total CO2 load in', period, '=', round(model.emission(), 2))
+    print('Total CO2 load in', period, '=', model.emission())
     print('CO2 load limit in', period, '=', round(model.limit(), 2))
     print(' ')
     
     print('Selection of plant s for CCS retrofit in', period)
-    print(' ')
-    
+    print(' ')    
     for s in source_data.keys():    
         print(s, '=', model.B[s]())
+    print(' ')
     
     print('Carbon Intensity of CCS Retrofitted sources i in', period)
-    print(' ')
-    
+    print(' ')    
     for s in source_data.keys():    
         print(s, '=', round(model.CI_RET[s](), 3), 'TWh/y')
-
-    print(' ')
-    print('Extent of CCS retrofit on source i in', period)
     print(' ')
     
+    print('Extent of CCS retrofit on source i in', period)
+    print(' ')    
     for s in source_data.keys():    
         print(s, '=', round(model.CCS[s](), 2), 'TWh/y')
-
-    print(' ')
-    print('Net energy from source i without CCS retrofit in', period)
     print(' ')
     
+    print('Net energy from source i without CCS retrofit in', period)
+    print(' ')    
     for s in source_data.keys():
         print(s, '=', round(model.net_energy[s](), 2), 'TWh/y')
-
     print(' ')    
-    print('Net energy from source i with CCS retrofit in', period)
-    print(' ')
     
+    print('Net energy from source i with CCS retrofit in', period)
+    print(' ')    
     for s in source_data.keys():
         print(s, '=', round(model.net_energy_CCS[s](), 2), 'TWh/y')
-
     print(' ')  
+    
     print('Minimum NET Deployment in', period, '=', round(model.NET(), 2), 'TWh/y')
     print(' ') 
     
@@ -315,6 +311,10 @@ def EP_Results(source_data, period_data, period):
     print('Energy Planning Table for', period)
     print(' ')
     print(energy_planning)
+    print(' ')
+    
+    print('Revised total CO2 Emission after energy planning in', period, round(model.new_emission(), 2))
+    
     '''
     energy = [0, 
               model.NET(), 
@@ -366,7 +366,6 @@ def EP_Results(source_data, period_data, period):
     '''
     return    
 
-
 EP_Results(source_period_1, data_period_1, 'P1')
-#EP_Results(source_period_2, data_period_2, 'P2')
-#EP_Results(source_period_3, data_period_3, 'P3')
+EP_Results(source_period_2, data_period_2, 'P2')
+EP_Results(source_period_3, data_period_3, 'P3')
