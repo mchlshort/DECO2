@@ -17,8 +17,7 @@ NETs are utilised to achieve the emission limit.
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 import pandas as pd
-#import sys
-#import matplotlib.pyplot as plt
+import sys
 
 '''
 source_period_[Period Number] represents the energy data for [Period Number]
@@ -56,7 +55,9 @@ source_period_2 = {
     'Plant_6'  : {'Energy' : 5.0,
                     'CI' : 1},                    
     'Plant_7'  : {'Energy' : 5.0,
-                    'CI' : 1}                    
+                    'CI' : 1},
+    'Plant_8'  : {'Energy' : 0.0,
+                    'CI' : 1} 
     }
 
 source_period_3 = {
@@ -71,7 +72,11 @@ source_period_3 = {
     'Plant_5'  : {'Energy' : 5.0,
                     'CI' : 0.8},                    
     'Plant_6'  : {'Energy' : 5.0,
-                    'CI' : 1}                        
+                    'CI' : 1},
+    'Plant_7'  : {'Energy' : 0.0,
+                    'CI' : 1},
+    'Plant_8'  : {'Energy' : 0.0,
+                    'CI' : 1} 
     }
 
 '''
@@ -145,7 +150,7 @@ def EP_Period(source_data,period_data):
     #This variable determines the carbon intensity of each fossil-based source with CCS deployment
     model.CI_RET = pyo.Var(S, domain = pyo.NonNegativeReals)
     
-    model.sum_CCS = pyo.Var(domain = pyo.NonNegativeReals)
+    
    
     #OBJECTIVE FUNCTION
     
@@ -173,31 +178,25 @@ def EP_Period(source_data,period_data):
         model.cons.add(model.CCS[s] * (1 - period_data['Constraints']['X']) * model.B[s] == model.net_energy_CCS[s])
         
         #The summation of energy contribution from each source with and without CCS retrofit must equal to individual energy contribution
-        model.cons.add((model.net_energy[s] * (1 - model.B[s])) + (model.CCS[s]* model.B[s]) == source_data[s]['Energy'])
-        
-                          
+        model.cons.add(model.net_energy[s] + model.CCS[s] == source_data[s]['Energy'])   
+                       
     #Total energy contribution from all energy sources to satisfy the total demand
     model.cons.add(sum(((model.net_energy[s]*(1 - model.B[s])) + (model.net_energy_CCS[s] * model.B[s])) for s in S) + model.NET == period_data['Constraints']['Demand'])
     
     #The total CO2 load contribution from all energy sources is equivalent to the revised total CO2 emission after energy planning 
-    model.cons.add(sum((model.net_energy[s] * source_data[s]['CI'] * (1 -  model.B[s])) + (model.net_energy_CCS[s] * model.CI_RET[s] * model.B[s]) for s in S)
+    model.cons.add(sum((model.net_energy[s] * source_data[s]['CI']) + (model.net_energy_CCS[s] * model.CI_RET[s]) for s in S)
                + (model.NET * period_data['Constraints']['NET_CI']) == model.new_emission)     
-   
-    #Total CO2 load contribution from all energy sources to satisfy the emission limit
-    model.cons.add(model.new_emission <= model.limit)     
     
+    #Total CO2 load contribution from all energy sources to satisfy the emission limit
+    model.cons.add(model.new_emission <= model.limit)  
+        
     #No CCS retrofit would be done on renewable energy power plants
-    model.CCS['Plant_1'].fix(0)   
+    model.CCS['Plant_1'].fix(0)
     
     return model
 
 #Specifying the data for each model as an argument
 model_1 = EP_Period(source_period_1, data_period_1)
-#opt = SolverFactory('octeract-engine')
-#results = opt.solve(model_1)
-#print(results)
-#model_1.pprint()
-#sys.exit()
 model_2 = EP_Period(source_period_2, data_period_2)
 model_3 = EP_Period(source_period_3, data_period_3)
 
@@ -219,6 +218,7 @@ It needs to be put in the right set (block_sets) with objective function turned 
 def build_individual_blocks(model, block_sets):
     model = EP[block_sets]
     model.obj.deactivate()
+    model.del_component(model.obj)
     return model
 
 #Defining the pyomo block structure with the set block sets and rule to build the blocks
@@ -234,9 +234,9 @@ Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].NET +
                                sense = pyo.minimize)
 
 #Using ipopt solver to solve the energy planning model
-opt = SolverFactory('octeract-engine', tee = True)
-solution_status = opt.solve(Full_model)
-print(solution_status)
+opt = SolverFactory('octeract-engine')
+results = opt.solve(Full_model)
+print(results)
 '''
 Creating a fuction to publish the results energy planning scenario for a single period
 
@@ -296,11 +296,8 @@ def EP_Results(source_data, period_data, period):
     energy_planning = pd.DataFrame()
 
     for s in source_data.keys():
-        energy_planning.loc[s, 'Energy'] = source_data[s]['Energy']
-        #energy_planning.loc[s, 'Carbon Intensity'] = round(source_data[s]['CI'], 2)
-        energy_planning.loc[s, 'CCS Ret'] = round(model.CCS[s](), 2)
-        #energy_planning.loc[s, 'CCS Carbon Intensity'] = round(model.CI_RET[s](), 2)
-        #nergy_planning.loc['NET', 'CCS Carbon Intensity'] = period_data['Constraints']['NET_CI']
+        energy_planning.loc[s, 'Energy'] = source_data[s]['Energy']       
+        energy_planning.loc[s, 'CCS Ret'] = round(model.CCS[s](), 2)        
         energy_planning.loc[s, 'Net Energy wo CCS'] = round(model.net_energy[s](), 2)
         energy_planning.loc[s, 'Net Energy w CCS'] = round(model.net_energy_CCS[s](), 2)
         energy_planning.loc[s, 'Net Energy'] = round(model.net_energy[s]() + model.net_energy_CCS[s](), 2)
@@ -315,55 +312,6 @@ def EP_Results(source_data, period_data, period):
     
     print('Revised total CO2 Emission after energy planning in', period, round(model.new_emission(), 2))
     
-    '''
-    energy = [0, 
-              model.NET(), 
-              model.net_energy['Renewables'](), 
-              model.net_energy_CCS['Natural Gas'](),
-              model.net_energy_CCS['Oil'](), 
-              model.net_energy_CCS['Coal'](),          
-              model.net_energy['Natural Gas'](),
-              model.net_energy['Oil'](), 
-              model.net_energy['Coal']()]
-    
-    emission = [0, 
-                model.NET() * period_data['Constraints']['NET_CI'], 
-                model.net_energy['Renewables']() * source_data['Renewables']['CI'],
-                model.net_energy_CCS['Natural Gas']() * model.CI_RET['Natural Gas'](),
-                model.net_energy_CCS['Oil']() * model.CI_RET['Oil'](),
-                model.net_energy_CCS['Coal']() * model.CI_RET['Coal'](),           
-                model.net_energy['Natural Gas']() * source_data['Natural Gas']['CI'],
-                model.net_energy['Oil']() * source_data['Oil']['CI'], 
-                model.net_energy['Coal']() * source_data['Coal']['CI']]
-    
-
-    energy_series = pd.Series(energy)
-    energy_cum = energy_series.cumsum()
-    #Creating a cumulative series for the energy
-    
-    emission_series = pd.Series(emission)
-    emission_cum = emission_series.cumsum()
-    #Creating a cumulative series for the emission
-    
-    x_coor = [-5, 90]
-    y_coor = [0, 0]
-    plt.plot(x_coor, y_coor, 'k', lw = 3)
-    #Creating a horizontal line at the origin
-    
-    if period == 'P1':
-        plt.plot(energy_cum, emission_cum, 'r', lw=3, label = period)
-    elif period == 'P2':
-        plt.plot(energy_cum, emission_cum, 'g', lw=3, label = period)
-    else:
-        plt.plot(energy_cum, emission_cum, 'm', lw=3, label = period)            
-    
-        
-    plt.xlabel('Energy / TWh/y')
-    plt.ylabel('CO2 Load / Mt/y')
-    plt.grid(True)
-    plt.title('Energy Planning Scenarios')
-    plt.legend()
-    '''
     return    
 
 EP_Results(source_period_1, data_period_1, 'P1')
