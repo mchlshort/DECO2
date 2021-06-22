@@ -118,7 +118,7 @@ returns:
     the energy planning model with all variables, constraints and objective function
 '''
 def EP_Period(source_data,period_data): 
-    S = source_period_1.keys()
+    S = source_data.keys()
     model = pyo.ConcreteModel()
        
     #LIST OF VARIABLES
