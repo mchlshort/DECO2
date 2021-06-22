@@ -1,0 +1,250 @@
+
+Problem:
+- Lower bound: -inf
+  Upper bound: inf
+  Number of objectives: 1
+  Number of constraints: 127
+  Number of variables: 129
+  Sense: unknown
+Solver:
+- Status: ok
+  Message: Solved_To_Global_Optimality
+  Termination condition: optimal
+  Id: 0
+  Error rc: 0
+  Time: 5.40575909614563
+Solution:
+- number of solutions: 0
+  number of solutions displayed: 0
+
+
+Time period = 1
+
+Total CO2 load in 1 = 31.2
+CO2 load limit in 1 = 24.96
+
+Selection of plant s for CCS retrofit in 1
+
+Plant_1 = 0.0
+Plant_2 = 1.0
+Plant_3 = 1.0
+Plant_4 = 0.0
+Plant_5 = 0.0
+Plant_6 = 0.0
+Plant_7 = 0.0
+Plant_8 = 0.0
+
+Carbon Intensity of CCS Retrofitted sources i in 1
+
+Plant_1 = 0.0 TWh/y
+Plant_2 = 0.088 TWh/y
+Plant_3 = 0.088 TWh/y
+Plant_4 = 0.088 TWh/y
+Plant_5 = 0.141 TWh/y
+Plant_6 = 0.176 TWh/y
+Plant_7 = 0.176 TWh/y
+Plant_8 = 0.176 TWh/y
+
+Extent of CCS retrofit on source i in 1
+
+Plant_1 = 0 TWh/y
+Plant_2 = 5.0 TWh/y
+Plant_3 = 7.0 TWh/y
+Plant_4 = 0.0 TWh/y
+Plant_5 = 0.0 TWh/y
+Plant_6 = 0.04 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Net energy from source i without CCS retrofit in 1
+
+Plant_1 = 18.0 TWh/y
+Plant_2 = 0.0 TWh/y
+Plant_3 = 0.0 TWh/y
+Plant_4 = 7.2 TWh/y
+Plant_5 = 6.0 TWh/y
+Plant_6 = 7.96 TWh/y
+Plant_7 = 5.0 TWh/y
+Plant_8 = 3.8 TWh/y
+
+Net energy from source i with CCS retrofit in 1
+
+Plant_1 = 0.0 TWh/y
+Plant_2 = 4.25 TWh/y
+Plant_3 = 5.95 TWh/y
+Plant_4 = 0.0 TWh/y
+Plant_5 = 0.0 TWh/y
+Plant_6 = 0.0 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Minimum NET Deployment in 1 = 1.84 TWh/y
+
+Energy Planning Table for 1
+
+         Energy  CCS Ret  Net Energy wo CCS  Net Energy w CCS  Net Energy  Carbon Load
+Plant_1    18.0     0.00              18.00              0.00       18.00         0.00
+NET         NaN      NaN                NaN               NaN        1.84        -1.10
+Plant_2     5.0     5.00               0.00              4.25        4.25         0.38
+Plant_3     7.0     7.00               0.00              5.95        5.95         0.53
+Plant_4     7.2     0.00               7.20              0.00        7.20         3.60
+Plant_5     6.0     0.00               6.00              0.00        6.00         4.80
+Plant_6     8.0     0.04               7.96              0.00        7.96         7.96
+Plant_7     5.0     0.00               5.00              0.00        5.00         5.00
+Plant_8     3.8     0.00               3.80              0.00        3.80         3.80
+
+Revised total CO2 Emission after energy planning in 1 24.96
+
+Time period = 2
+
+Total CO2 load in 2 = 29.0
+CO2 load limit in 2 = 17.4
+
+Selection of plant s for CCS retrofit in 2
+
+Plant_1 = 0.0
+Plant_2 = 1.0
+Plant_3 = 1.0
+Plant_4 = 0.0
+Plant_5 = 0.0
+Plant_6 = 1.0
+Plant_7 = 0.0
+Plant_8 = 0.0
+
+Carbon Intensity of CCS Retrofitted sources i in 2
+
+Plant_1 = 0.0 TWh/y
+Plant_2 = 0.088 TWh/y
+Plant_3 = 0.088 TWh/y
+Plant_4 = 0.088 TWh/y
+Plant_5 = 0.141 TWh/y
+Plant_6 = 0.176 TWh/y
+Plant_7 = 0.176 TWh/y
+Plant_8 = 0.176 TWh/y
+
+Extent of CCS retrofit on source i in 2
+
+Plant_1 = 0 TWh/y
+Plant_2 = 8.0 TWh/y
+Plant_3 = 10.0 TWh/y
+Plant_4 = 0.0 TWh/y
+Plant_5 = 0.0 TWh/y
+Plant_6 = 5.0 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Net energy from source i without CCS retrofit in 2
+
+Plant_1 = 30.0 TWh/y
+Plant_2 = 0.0 TWh/y
+Plant_3 = 0.0 TWh/y
+Plant_4 = 12.0 TWh/y
+Plant_5 = 5.0 TWh/y
+Plant_6 = 0.0 TWh/y
+Plant_7 = 5.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Net energy from source i with CCS retrofit in 2
+
+Plant_1 = 0.0 TWh/y
+Plant_2 = 6.8 TWh/y
+Plant_3 = 8.5 TWh/y
+Plant_4 = 0.0 TWh/y
+Plant_5 = 0.0 TWh/y
+Plant_6 = 4.25 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Minimum NET Deployment in 2 = 3.45 TWh/y
+
+Energy Planning Table for 2
+
+         Energy  CCS Ret  Net Energy wo CCS  Net Energy w CCS  Net Energy  Carbon Load
+Plant_1    30.0      0.0               30.0              0.00       30.00         0.00
+NET         NaN      NaN                NaN               NaN        3.45        -2.07
+Plant_2     8.0      8.0                0.0              6.80        6.80         0.60
+Plant_3    10.0     10.0                0.0              8.50        8.50         0.75
+Plant_4    12.0      0.0               12.0              0.00       12.00         6.00
+Plant_5     5.0      0.0                5.0              0.00        5.00         4.00
+Plant_6     5.0      5.0                0.0              4.25        4.25         0.75
+Plant_7     5.0      0.0                5.0              0.00        5.00         5.00
+Plant_8     0.0      0.0                0.0              0.00        0.00         0.00
+
+Revised total CO2 Emission after energy planning in 2 15.03
+
+Time period = 3
+
+Total CO2 load in 3 = 29.0
+CO2 load limit in 3 = 11.6
+
+Selection of plant s for CCS retrofit in 3
+
+Plant_1 = 0.0
+Plant_2 = 1.0
+Plant_3 = 1.0
+Plant_4 = 0.0
+Plant_5 = 0.0
+Plant_6 = 1.0
+Plant_7 = 0.0
+Plant_8 = 0.0
+
+Carbon Intensity of CCS Retrofitted sources i in 3
+
+Plant_1 = 0.0 TWh/y
+Plant_2 = 0.088 TWh/y
+Plant_3 = 0.088 TWh/y
+Plant_4 = 0.088 TWh/y
+Plant_5 = 0.141 TWh/y
+Plant_6 = 0.176 TWh/y
+Plant_7 = 0.176 TWh/y
+Plant_8 = 0.176 TWh/y
+
+Extent of CCS retrofit on source i in 3
+
+Plant_1 = 0 TWh/y
+Plant_2 = 10.0 TWh/y
+Plant_3 = 15.0 TWh/y
+Plant_4 = 0.0 TWh/y
+Plant_5 = 0.0 TWh/y
+Plant_6 = 5.0 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Net energy from source i without CCS retrofit in 3
+
+Plant_1 = 40.0 TWh/y
+Plant_2 = 0.0 TWh/y
+Plant_3 = 0.0 TWh/y
+Plant_4 = 15.0 TWh/y
+Plant_5 = 5.0 TWh/y
+Plant_6 = 0.0 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Net energy from source i with CCS retrofit in 3
+
+Plant_1 = 0.0 TWh/y
+Plant_2 = 8.5 TWh/y
+Plant_3 = 12.75 TWh/y
+Plant_4 = 0.0 TWh/y
+Plant_5 = 0.0 TWh/y
+Plant_6 = 4.25 TWh/y
+Plant_7 = 0.0 TWh/y
+Plant_8 = 0.0 TWh/y
+
+Minimum NET Deployment in 3 = 4.5 TWh/y
+
+Energy Planning Table for 3
+
+         Energy  CCS Ret  Net Energy wo CCS  Net Energy w CCS  Net Energy  Carbon Load
+Plant_1    40.0      0.0               40.0              0.00       40.00         0.00
+NET         NaN      NaN                NaN               NaN        4.50        -2.70
+Plant_2    10.0     10.0                0.0              8.50        8.50         0.75
+Plant_3    15.0     15.0                0.0             12.75       12.75         1.13
+Plant_4    15.0      0.0               15.0              0.00       15.00         7.50
+Plant_5     5.0      0.0                5.0              0.00        5.00         4.00
+Plant_6     5.0      5.0                0.0              4.25        4.25         0.75
+Plant_7     0.0      0.0                0.0              0.00        0.00         0.00
+Plant_8     0.0      0.0                0.0              0.00        0.00         0.00
+
+Revised total CO2 Emission after energy planning in 3 11.43
