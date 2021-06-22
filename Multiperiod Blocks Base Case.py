@@ -17,7 +17,6 @@ NETs are utilised to achieve the emission limit.
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 import pandas as pd
-import sys
 
 '''
 source_period_[Period Number] represents the energy data for [Period Number]
@@ -85,7 +84,7 @@ i.e. total demand, emission limit, CCS data
 '''
 data_period_1 = {
         'Constraints' : {'Demand' : 60,
-                         'Emission_Red' : 0.5,
+                         'Emission_Red' : 0.8,
                          'NET_CI' : -0.6,
                          'RR': 0.85,
                          'X': 0.15}      
@@ -107,6 +106,7 @@ data_period_3 = {
                          'X': 0.15}      
     }
 
+
 '''
 Creating a fuction to define the energy planning model
 
@@ -117,10 +117,10 @@ Args:
 returns:
     the energy planning model with all variables, constraints and objective function
 '''
-def EP_Period(source_data,period_data):
-    S = source_data.keys()
+def EP_Period(source_data,period_data): 
+    S = source_period_1.keys()
     model = pyo.ConcreteModel()
-   
+       
     #LIST OF VARIABLES
     
     #Binary variable for selection of plant s for CCS
@@ -149,8 +149,7 @@ def EP_Period(source_data,period_data):
     
     #This variable determines the carbon intensity of each fossil-based source with CCS deployment
     model.CI_RET = pyo.Var(S, domain = pyo.NonNegativeReals)
-    
-    
+       
    
     #OBJECTIVE FUNCTION
     
@@ -228,10 +227,12 @@ Full_model.subprobs = pyo.Block(block_sets, rule = build_individual_blocks)
 Creating a new objective function for the new model
 The objective minimises the cumulative extent of CCS retrofit from all fossil-based sources
 '''
+
 Full_model.obj = pyo.Objective(expr = Full_model.subprobs['P1'].NET +
                                Full_model.subprobs['P2'].NET +
                                Full_model.subprobs['P3'].NET, 
                                sense = pyo.minimize)
+                              
 
 #Using ipopt solver to solve the energy planning model
 opt = SolverFactory('octeract-engine')
