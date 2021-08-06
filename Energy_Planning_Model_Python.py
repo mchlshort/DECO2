@@ -1,5 +1,5 @@
 '''
-Created on 2nd August 2021
+Created on 6th August 2021
 
 Energy Planning Scenario in Pyomo
 
@@ -17,10 +17,15 @@ NETs are utilised to achieve the emission limit.
 import pyomo.environ as pyo
 from pyomo.opt import SolverFactory
 import pandas as pd
+import os
 from openpyxl import load_workbook
 
-file = r'Energy_Planning_User_Interface.xlsx' 
-plant_data = pd.read_excel(file, sheet_name = 'PLANT_DATA', index_col = 0, header = 32).to_dict()
+path = os.chdir(r'C:/Users/LENOVO/OneDrive - University of Nottingham Malaysia/The University of Nottingham/BC COP26 Trilateral Research Initiative/BCCOP26TrilateralProject') 
+
+cwd = os.getcwd()
+
+file = r'Energy_Planning_User_Interface.xlsx'
+plant_data = pd.read_excel(file, sheet_name = 'PLANT_DATA', index_col = 0, header = 35).to_dict()
 EP_data = pd.read_excel(file, sheet_name = 'EP_DATA', header = 9)
 NET_data = pd.read_excel(file, sheet_name = 'NET_DATA', header = 15)
 
@@ -28,11 +33,11 @@ s = plant_data.keys()
 
 wb = load_workbook(file)
 sheet = wb['PLANT_DATA']
-energy_unit = sheet['B22'].value
-CI_unit = sheet['B23'].value
-carbon_load_unit = sheet['B24'].value
-cost_unit = sheet['B25'].value
-flag = sheet['B30'].value
+energy_unit = sheet['B25'].value
+CI_unit = sheet['B26'].value
+carbon_load_unit = sheet['B27'].value
+cost_unit = sheet['B28'].value
+flag = sheet['B33'].value
 
 #Period number
 prd = list(EP_data['Period'])
@@ -121,20 +126,38 @@ def EP_Period(plant_data,period_data):
     #This variable determines the deployment of energy sources in power plant s
     model.energy = pyo.Var(model.S, domain = pyo.NonNegativeReals)
     
-    #This variable determines the carbon intensity of power plant s with CCS deployment for each period
-    model.CI_RET = pyo.Var(model.S, domain = pyo.NonNegativeReals)
+    #This variable determines the carbon intensity of power plant s with CCS deployment type 1 for each period
+    model.CI_RET_1 = pyo.Var(model.S, domain = pyo.NonNegativeReals)
     
-    #Binary variable for CCS deployment in power plant s for each period
+    #This variable determines the carbon intensity of power plant s with CCS deployment type 2 for each period
+    model.CI_RET_2 = pyo.Var(model.S, domain = pyo.NonNegativeReals)
+    
+    #Binary variable for CCS deployment type 1 in power plant s for each period
     model.B = pyo.Var(model.S, domain = pyo.Binary)
     
-    #This variable represents the extent of CCS retrofit in power plant s for each period
-    model.CCS = pyo.Var(model.S, domain = pyo.NonNegativeReals) 
+    #Binary variable for CCS deployment type 2 in power plant s for each period
+    model.C = pyo.Var(model.S, domain = pyo.Binary)
+    
+    #This variable represents the total extent of CCS retrofit in power plant s for each period
+    model.CCS = pyo.Var(model.S, domain = pyo.NonNegativeReals)
+    
+    #This variable represents the extent of CCS retrofit type 1 in power plant s for each period
+    model.CCS_1 = pyo.Var(model.S, domain = pyo.NonNegativeReals) 
+    
+    #This variable represents the extent of CCS retrofit type 2 in power plant s for each period
+    model.CCS_2 = pyo.Var(model.S, domain = pyo.NonNegativeReals) 
     
     #This variable determines the net energy available from power plant s without CCS deployment for each period
     model.net_energy = pyo.Var(model.S, domain = pyo.NonNegativeReals)
     
     #This variable determines the net energy available from power plant s with CCS deployment for each period
     model.net_energy_CCS = pyo.Var(model.S, domain = pyo.NonNegativeReals)
+    
+    #This variable determines the net energy available from power plant s with CCS deployment type 1 for each period
+    model.net_energy_CCS_1 = pyo.Var(model.S, domain = pyo.NonNegativeReals)
+    
+    #This variable determines the net energy available from power plant s with CCS deployment type 2 for each period
+    model.net_energy_CCS_2 = pyo.Var(model.S, domain = pyo.NonNegativeReals)
     
     #This variable represents the minimum deployment of the first choice of EP_NETs for each period 
     model.EP_NET_1 = pyo.Var(domain = pyo.NonNegativeReals)
@@ -179,31 +202,44 @@ def EP_Period(plant_data,period_data):
     
     for s in model.S:
         #Calculation of carbon intensity for CCS retrofitted fossil-based sources
-        model.cons.add((model.plant_data[s]['CI'] * (1 - model.plant_data[s]['RR']) / (1 - model.plant_data[s]['X'])) == model.CI_RET[s])
+        model.cons.add((model.plant_data[s]['CI'] * (1 - model.plant_data[s]['RR_1']) / (1 - model.plant_data[s]['X_1'])) == model.CI_RET_1[s])
+        
+        #Calculation of carbon intensity for CCS retrofitted fossil-based sources
+        model.cons.add((model.plant_data[s]['CI'] * (1 - model.plant_data[s]['RR_2']) / (1 - model.plant_data[s]['X_2'])) == model.CI_RET_2[s])
         
         #The deployment of energy source in power plant s should at least satisfy the lower bound
         model.cons.add(model.energy[s] >= model.plant_data[s]['LB'])
         
         #The deployment of energy source in power plant s should at most satisfy the upper bound
         model.cons.add(model.energy[s] <= model.plant_data[s]['UB'])
+        
+        #The total extent of CCS retrofit in power plant s should be equal to summation of deployment of individual types of  CCS technology
+        model.cons.add(model.CCS_1[s] + model.CCS_2[s] ==  model.CCS[s])
     
-        #The extent of CCS retrofit on fossil-based sources should never exceed the available energy
+        #The total extent of CCS retrofit in power plant s should never exceed the available energy
         model.cons.add(model.CCS[s] <= model.energy[s])
         
-        #Determine the net energy available from fossil-based sources with CCS retrofit
-        model.cons.add(model.CCS[s] * (1 - model.plant_data[s]['X']) == model.net_energy_CCS[s] * model.B[s])
+        #Determine the net energy available from power plant s with CCS retrofit type 1
+        model.cons.add(model.CCS_1[s] * (1 - model.plant_data[s]['X_1']) == model.net_energy_CCS_1[s] * model.B[s])
+        
+        #Determine the net energy available from power plant s with CCS retrofit type 2
+        model.cons.add(model.CCS_2[s] * (1 - model.plant_data[s]['X_2']) == model.net_energy_CCS_2[s] * model.C[s])
+        
+        #Determine the net energy available from power plant s with CCS retrofit
+        model.cons.add(model.net_energy_CCS_1[s] + model.net_energy_CCS_2[s] == model.net_energy_CCS[s])
         
         #The summation of energy contribution from each source with and without CCS retrofit must equal to individual energy contribution
-        model.cons.add(model.net_energy[s] + (model.CCS[s] * model.B[s]) == model.energy[s]) 
+        model.cons.add(model.net_energy[s] + (model.CCS_1[s] * model.B[s]) + (model.CCS_2[s] * model.C[s]) == model.energy[s]) 
     
         if 'REN' in model.plant_data[s].values():
-            model.CCS[s].fix(0)
+            model.CCS_1[s].fix(0)
+            model.CCS_2[s].fix(0)
    
     #Total energy contribution from all energy sources to satisfy the total demand
-    model.cons.add(sum(((model.net_energy[s]) + (model.net_energy_CCS[s] * model.B[s])) for s in model.S) + model.comp + model.EP_NET_1 + model.EP_NET_2 + model.EP_NET_3 == model.period_data['Demand'] + model.EC_NET_1 + model.EC_NET_2 + model.EC_NET_3) 
+    model.cons.add(sum(((model.net_energy[s]) + (model.net_energy_CCS_1[s] * model.B[s]) + (model.net_energy_CCS_2[s] * model.C[s])) for s in model.S) + model.comp + model.EP_NET_1 + model.EP_NET_2 + model.EP_NET_3 == model.period_data['Demand'] + model.EC_NET_1 + model.EC_NET_2 + model.EC_NET_3) 
     
     #The total CO2 load contribution from all energy sources must satisfy most the CO2 emission limit after energy planning 
-    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['CI']) + (model.net_energy_CCS[s] * model.CI_RET[s]) for s in model.S)
+    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['CI']) + (model.net_energy_CCS_1[s] * model.CI_RET_1[s]) + (model.net_energy_CCS_2[s] * model.CI_RET_2[s]) for s in model.S)
                + (model.EC_NET_1 * model.period_data['EC_NET_1_CI'])
                + (model.EC_NET_2 * model.period_data['EC_NET_2_CI'])
                + (model.EC_NET_3 * model.period_data['EC_NET_3_CI'])
@@ -213,7 +249,7 @@ def EP_Period(plant_data,period_data):
                + (model.comp * model.period_data['Comp_CI']) == model.new_emission)
 
     #The summation of cost for each power plant s should equal to the total cost of each period
-    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['Cost']) + (model.net_energy_CCS[s] * model.plant_data[s]['Cost_CCS'] * model.B[s]) for s in model.S)
+    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['Cost']) + (model.net_energy_CCS_1[s] * model.plant_data[s]['Cost_CCS_1'] * model.B[s]) + (model.net_energy_CCS_2[s] * model.plant_data[s]['Cost_CCS_2'] * model.C[s]) for s in model.S)
                + (model.EC_NET_1 * model.period_data['Cost_EC_NET_1'])
                + (model.EC_NET_2 * model.period_data['Cost_EC_NET_2'])
                + (model.EC_NET_3 * model.period_data['Cost_EC_NET_3'])
@@ -258,13 +294,20 @@ The blocks are linked such that the extent of CCS retrofit on source i at period
 should at least match the extent of CCS retrofit on source i at period t
 '''
 
-def linking_blocks(model, block_sets, s):
+def linking_blocks_1(model, block_sets, s):
     if block_sets == len(prd):
         return pyo.Constraint.Skip
     else:   
-        return Full_model.subprobs[block_sets + 1].CCS[s] >=  Full_model.subprobs[block_sets].CCS[s]
+        return Full_model.subprobs[block_sets + 1].CCS_1[s] >=  Full_model.subprobs[block_sets].CCS_1[s]
+    
+def linking_blocks_2(model, block_sets, s):
+    if block_sets == len(prd):
+        return pyo.Constraint.Skip
+    else:   
+        return Full_model.subprobs[block_sets + 1].CCS_2[s] >=  Full_model.subprobs[block_sets].CCS_2[s]
         
-Full_model.Cons1 = pyo.Constraint(block_sets, s, rule = linking_blocks)
+Full_model.Cons1 = pyo.Constraint(block_sets, s, rule = linking_blocks_1)
+Full_model.Cons2 = pyo.Constraint(block_sets, s, rule = linking_blocks_2)
 
 '''
 Creating a new objective function for the new model
@@ -308,14 +351,17 @@ def EP_Results(plant_data, period_data, period):
         energy_planning.loc[s, 'Fuel'] = plant_data[s]['Fuel']
         energy_planning.loc[s, 'Energy'] = round(model.energy[s](), 2)
         energy_planning.loc[s, 'CI'] = plant_data[s]['CI']
-        energy_planning.loc[s, 'CCS CI'] = round(model.CI_RET[s](), 3)
-        energy_planning.loc[s, 'CCS Selection'] = model.B[s]()
-        energy_planning.loc[s, 'CCS Ret'] = round(model.CCS[s](), 2)        
+        energy_planning.loc[s, 'CCS_1 CI'] = round(model.CI_RET_1[s](), 3)
+        energy_planning.loc[s, 'CCS_2 CI'] = round(model.CI_RET_2[s](), 3)
+        energy_planning.loc[s, 'CCS_1 Selection'] = model.B[s]()
+        energy_planning.loc[s, 'CCS_2 Selection'] = model.C[s]()
+        energy_planning.loc[s, 'CCS_1 Ret'] = round(model.CCS_1[s](), 2) 
+        energy_planning.loc[s, 'CCS_2 Ret'] = round(model.CCS_2[s](), 2)       
         energy_planning.loc[s, 'Net Energy wo CCS'] = round(model.net_energy[s](), 2)
         energy_planning.loc[s, 'Net Energy w CCS'] = round(model.net_energy_CCS[s](), 2)
         energy_planning.loc[s, 'Net Energy'] = round(model.net_energy[s]() + model.net_energy_CCS[s](), 2)
-        energy_planning.loc[s, 'Carbon Load'] = round((model.net_energy[s]() * plant_data[s]['CI']) + (model.net_energy_CCS[s]() * model.CI_RET[s]()), 2)
-    
+        energy_planning.loc[s, 'Carbon Load'] = round((model.net_energy[s]() * plant_data[s]['CI']) + (model.net_energy_CCS_1[s]() * model.CI_RET_1[s]()) + (model.net_energy_CCS_2[s]() * model.CI_RET_2[s]()), 2)
+        
     energy_planning.loc['EP_NET_1', 'Fuel'] = 'EP_NET_1'
     energy_planning.loc['EP_NET_2', 'Fuel'] = 'EP_NET_2'
     energy_planning.loc['EP_NET_3', 'Fuel'] = 'EP_NET_3'
