@@ -1,5 +1,5 @@
 '''
-Created on 6th August 2021
+Created on 11th September 2021
 
 Energy Planning Scenario in Pyomo
 
@@ -24,8 +24,8 @@ path = os.chdir(r'C:/Users/LENOVO/OneDrive - University of Nottingham Malaysia/T
 
 cwd = os.getcwd()
 
-file = r'Optimal_Decarbonisation_User_Interface.xlsx'
-plant_data = pd.read_excel(file, sheet_name = 'PLANT_DATA', index_col = 0, header = 35, nrows = 11).to_dict()
+file = r'Optimal_Decarbonisation_User_Interface_2.xlsx'
+plant_data = pd.read_excel(file, sheet_name = 'PLANT_DATA', index_col = 0, header = 35, nrows = 13).to_dict()
 EP_data = pd.read_excel(file, sheet_name = 'EP_DATA', header = 9)
 NET_data = pd.read_excel(file, sheet_name = 'NET_DATA', header = 15)
 
@@ -220,23 +220,29 @@ def EP_Period(plant_data,period_data):
         model.cons.add(model.CCS[s] <= model.energy[s])
         
         #Determine the net energy available from power plant s with CCS retrofit type 1
-        model.cons.add(model.CCS_1[s] * (1 - model.plant_data[s]['X_1']) == model.net_energy_CCS_1[s] * model.B[s])
+        model.cons.add(model.CCS_1[s] * (1 - model.plant_data[s]['X_1']) == model.net_energy_CCS_1[s])
         
         #Determine the net energy available from power plant s with CCS retrofit type 2
-        model.cons.add(model.CCS_2[s] * (1 - model.plant_data[s]['X_2']) == model.net_energy_CCS_2[s] * model.C[s])
+        model.cons.add(model.CCS_2[s] * (1 - model.plant_data[s]['X_2']) == model.net_energy_CCS_2[s])
         
-        #Determine the net energy available from power plant s with CCS retrofit
+	    #If selected, the exent of CCS retrofit type 1 for power plant s is limited by the upper bound of the energy output 
+        model.cons.add(model.CCS_1[s] <= model.plant_data[s]['UB'] * model.B[s])
+
+    	#If selected, the exent of CCS retrofit type 2 for power plant s is limited by the upper bound of the energy output
+        model.cons.add(model.CCS_2[s] <= model.plant_data[s]['UB'] * model.C[s])        
+
+    	#Determine the net energy available from power plant s with CCS retrofit
         model.cons.add(model.net_energy_CCS_1[s] + model.net_energy_CCS_2[s] == model.net_energy_CCS[s])
         
         #The summation of energy contribution from each source with and without CCS retrofit must equal to individual energy contribution
-        model.cons.add(model.net_energy[s] + (model.CCS_1[s] * model.B[s]) + (model.CCS_2[s] * model.C[s]) == model.energy[s]) 
+        model.cons.add(model.net_energy[s] + model.CCS_1[s] + model.CCS_2[s] == model.energy[s]) 
     
         if 'REN' in model.plant_data[s].values():
             model.CCS_1[s].fix(0)
             model.CCS_2[s].fix(0)
    
     #Total energy contribution from all energy sources to satisfy the total demand
-    model.cons.add(sum(((model.net_energy[s]) + (model.net_energy_CCS_1[s] * model.B[s]) + (model.net_energy_CCS_2[s] * model.C[s])) for s in model.S) + model.comp + model.EP_NET_1 + model.EP_NET_2 + model.EP_NET_3 == model.period_data['Demand'] + model.EC_NET_1 + model.EC_NET_2 + model.EC_NET_3) 
+    model.cons.add(sum(((model.net_energy[s]) + model.net_energy_CCS_1[s] + model.net_energy_CCS_2[s]) for s in model.S) + model.comp + model.EP_NET_1 + model.EP_NET_2 + model.EP_NET_3 == model.period_data['Demand'] + model.EC_NET_1 + model.EC_NET_2 + model.EC_NET_3) 
     
     #The total CO2 load contribution from all energy sources must satisfy most the CO2 emission limit after energy planning 
     model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['CI']) + (model.net_energy_CCS_1[s] * model.CI_RET_1[s]) + (model.net_energy_CCS_2[s] * model.CI_RET_2[s]) for s in model.S)
@@ -249,7 +255,7 @@ def EP_Period(plant_data,period_data):
                + (model.comp * model.period_data['Comp_CI']) == model.new_emission)
 
     #The summation of cost for each power plant s should equal to the total cost of each period
-    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['Cost']) + (model.net_energy_CCS_1[s] * model.plant_data[s]['Cost_CCS_1'] * model.B[s]) + (model.net_energy_CCS_2[s] * model.plant_data[s]['Cost_CCS_2'] * model.C[s]) for s in model.S)
+    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['Cost']) + (model.net_energy_CCS_1[s] * model.plant_data[s]['Cost_CCS_1']) + (model.net_energy_CCS_2[s] * model.plant_data[s]['Cost_CCS_2']) + (model.plant_data[s]['FX_Cost_CCS_1'] * model.B[s]) + (model.plant_data[s]['FX_Cost_CCS_2'] * model.C[s]) for s in model.S)
                + (model.EC_NET_1 * model.period_data['Cost_EC_NET_1'])
                + (model.EC_NET_2 * model.period_data['Cost_EC_NET_2'])
                + (model.EC_NET_3 * model.period_data['Cost_EC_NET_3'])
