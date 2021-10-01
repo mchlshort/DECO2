@@ -1,5 +1,5 @@
 '''
-Created on 11th September 2021
+Created on 1st October 2021
 
 Energy Planning Scenario in Pyomo
 
@@ -20,24 +20,21 @@ import pandas as pd
 import os
 from openpyxl import load_workbook
 
-path = os.chdir(r'C:/Users/LENOVO/OneDrive - University of Nottingham Malaysia/The University of Nottingham/BC COP26 Trilateral Research Initiative/BCCOP26TrilateralProject') 
-
 cwd = os.getcwd()
 
-file = r'Optimal_Decarbonisation_User_Interface_2.xlsx'
-plant_data = pd.read_excel(file, sheet_name = 'PLANT_DATA', index_col = 0, header = 35, nrows = 13).to_dict()
-EP_data = pd.read_excel(file, sheet_name = 'EP_DATA', header = 9)
-NET_data = pd.read_excel(file, sheet_name = 'NET_DATA', header = 15)
+file = r'Optimal_Decarbonisation_User_Interface.xlsx'
+plant_data = pd.read_excel(file, sheet_name = 'PLANT_DATA', index_col = 0, header = 29, nrows = 4).to_dict()
+EP_data = pd.read_excel(file, sheet_name = 'EP_DATA', header = 11)
+EG_data = pd.read_excel(file, sheet_name = 'ENERGY_DATA', header = 8)
+CCS_data = pd.read_excel(file, sheet_name = 'CCS_DATA', header = 12)
+CI_NET_data = pd.read_excel(file, sheet_name = 'CI_NET_DATA', header = 9)
+Cost_NET_data = pd.read_excel(file, sheet_name = 'COST_NET_DATA', header = 9)
 
 s = plant_data.keys()
 
 wb = load_workbook(file)
 sheet = wb['PLANT_DATA']
-energy_unit = sheet['B25'].value
-CI_unit = sheet['B26'].value
-carbon_load_unit = sheet['B27'].value
-cost_unit = sheet['B28'].value
-flag = sheet['B33'].value
+flag = sheet['B27'].value
 
 #Period number
 prd = list(EP_data['Period'])
@@ -48,57 +45,116 @@ Demand = list(EP_data['Energy Demand'])
 #Emission limit for each period
 Limit = list(EP_data['Emission Limit'])
 
-#Carbon intensity of first choice of EP-NET for each period
-EP_NET_1_CI = list(NET_data['CI EP-NET(1)'])
-
-#Carbon intensity of second choice of EP-NET for each period
-EP_NET_2_CI = list(NET_data['CI EP-NET(2)'])
-
-#Carbon intensity of third choice of EP-NET for each period
-EP_NET_3_CI = list(NET_data['CI EP-NET(3)'])
-
-#Cost of first choice of EP-NET for each period
-Cost_EP_NET_1 = list(NET_data['Cost EP-NET(1)'])
-
-#Cost of second choice of EP-NET for each period
-Cost_EP_NET_2 = list(NET_data['Cost EP-NET(2)'])
-
-#Cost of third choice of EP-NET for each period
-Cost_EP_NET_3 = list(NET_data['Cost EP-NET(3)'])
-
-#Carbon intensity of first choice of EC-NET for each period
-EC_NET_1_CI = list(NET_data['CI EC-NET(1)'])
-
-#Carbon intensity of second choice of EC-NET for each period
-EC_NET_2_CI = list(NET_data['CI EC-NET(2)'])
-
-#Carbon intensity of third choice of EC-NET for each period
-EC_NET_3_CI = list(NET_data['CI EC-NET(3)'])
-
-#Cost of first choice EC-NET for each period
-Cost_EC_NET_1 = list(NET_data['Cost EC-NET(1)'])
-
-#Cost of second choice EC-NET for each period
-Cost_EC_NET_2 = list(NET_data['Cost EC-NET(2)'])
-
-#Cost of third choice EC-NET for each period
-Cost_EC_NET_3 = list(NET_data['Cost EC-NET(3)'])
-
-#Carbon intensity of compensatory energy for each period
-Comp_CI = list(EP_data['CI Compensatory'])
-
-#Cost of compensatory energy for each period
-Cost_Comp = list(EP_data['Cost Compensatory'])
-
 #Budget allocation for each period
 Budget = list(EP_data['Budget'])
+
+#Carbon intensity of first choice of compensatory energy for each period
+Comp_CI_1 = list(EP_data['CI_COMP_1'])
+
+#Cost of first choice compensatory energy for each period
+Cost_Comp_1 = list(EP_data['COST_COMP_1'])
+
+#Carbon intensity of second choice of compensatory energy for each period
+Comp_CI_2 = list(EP_data['CI_COMP_2'])
+
+#Cost of second choice compensatory energy for each period
+Cost_Comp_2 = list(EP_data['COST_COMP_2'])
+
+#Cost of renewable energy
+Cost_REN = list(EG_data['REN'])
+
+#Cost of natural gas
+Cost_NG = list(EG_data['NG'])
+
+#Cost of oil
+Cost_OIL = list(EG_data['OIL'])
+
+#Cost of coal
+Cost_COAL = list(EG_data['COAL'])
+
+#Removal ratio of first choice of CCS technology
+RR_1 = list(CCS_data['RR_1'])
+
+#Parisitic power loss of first choice of CCS technology
+X_1 = list(CCS_data['X_1'])
+
+#Cost of first choice of CCS technology
+Cost_CCS_1 = list(CCS_data['Cost_CCS_1'])
+
+#Removal ratio of second choice of CCS technology
+RR_2 = list(CCS_data['RR_2'])
+
+#Parisitic power loss of second choice of CCS technology
+X_2 = list(CCS_data['X_2'])
+
+#Cost of second choice of CCS technology
+Cost_CCS_2 = list(CCS_data['Cost_CCS_2'])
+
+#Fixed cost of first choice of CCS technology
+FX_Cost_CCS_1 = list(CCS_data['FX_Cost_CCS_1'])
+
+#Fixed cost of second choice of CCS technology
+FX_Cost_CCS_2 = list(CCS_data['FX_Cost_CCS_2'])
+
+#Carbon intensity of first choice of EP-NET for each period
+EP_NET_1_CI = list(CI_NET_data['EP-NETs_1'])
+
+#Carbon intensity of second choice of EP-NET for each period
+EP_NET_2_CI = list(CI_NET_data['EP-NETs_2'])
+
+#Carbon intensity of third choice of EP-NET for each period
+EP_NET_3_CI = list(CI_NET_data['EP-NETs_3'])
+
+#Cost of first choice of EP-NET for each period
+Cost_EP_NET_1 = list(Cost_NET_data['EP-NETs_1'])
+
+#Cost of second choice of EP-NET for each period
+Cost_EP_NET_2 = list(Cost_NET_data['EP-NETs_2'])
+
+#Cost of third choice of EP-NET for each period
+Cost_EP_NET_3 = list(Cost_NET_data['EP-NETs_3'])
+
+#Carbon intensity of first choice of EC-NET for each period
+EC_NET_1_CI = list(CI_NET_data['EC-NETs_1'])
+
+#Carbon intensity of second choice of EC-NET for each period
+EC_NET_2_CI = list(CI_NET_data['EC-NETs_2'])
+
+#Carbon intensity of third choice of EC-NET for each period
+EC_NET_3_CI = list(CI_NET_data['EC-NETs_3'])
+
+#Cost of first choice EC-NET for each period
+Cost_EC_NET_1 = list(Cost_NET_data['EC-NETs_1'])
+
+#Cost of second choice EC-NET for each period
+Cost_EC_NET_2 = list(Cost_NET_data['EC-NETs_2'])
+
+#Cost of third choice EC-NET for each period
+Cost_EC_NET_3 = list(Cost_NET_data['EC-NETs_3'])
 
 numperiods = len(prd) + 1
 period_data_dict = {}
 
-for (i,D,L,EP1I,EP2I,EP3I,CEP1,CEP2,CEP3,EC1I,EC2I,EC3I,CEC1,CEC2,CEC3,CI,CC,B) in zip(prd, Demand, Limit, EP_NET_1_CI, EP_NET_2_CI, EP_NET_3_CI, Cost_EP_NET_1, Cost_EP_NET_2, Cost_EP_NET_2, EC_NET_1_CI, EC_NET_2_CI, EC_NET_3_CI, Cost_EC_NET_1, Cost_EC_NET_2, Cost_EC_NET_3, Comp_CI, Cost_Comp, Budget):    
+for (i,D,L,B,CI1,CC1,CI2,CC2,CRN,CNG,CO,CCL,RR1,X1,CCS1,RR2,X2,CCS2,FCCS1,FCCS2,EP1I,EP2I,EP3I,CEP1,CEP2,CEP3,EC1I,EC2I,EC3I,CEC1,CEC2,CEC3) in zip(prd, Demand, Limit, Budget, Comp_CI_1, Cost_Comp_1, Comp_CI_2, Cost_Comp_2, Cost_REN, Cost_NG, Cost_OIL, Cost_COAL, RR_1, X_1, Cost_CCS_1, RR_2, X_2, Cost_CCS_2, FX_Cost_CCS_1, FX_Cost_CCS_2, EP_NET_1_CI, EP_NET_2_CI, EP_NET_3_CI, Cost_EP_NET_1, Cost_EP_NET_2, Cost_EP_NET_3, EC_NET_1_CI, EC_NET_2_CI, EC_NET_3_CI, Cost_EC_NET_1, Cost_EC_NET_2, Cost_EC_NET_3):    
     period_data_dict[i]= {'Demand' : D, 
                           'Emission_Limit' : L,
+			              'Budget'    : B,
+			              'Comp_CI_1' : CI1,
+                          'Cost_Comp_1' : CC1,
+                          'Comp_CI_2' : CI2,
+                          'Cost_Comp_2' : CC2,
+                          'Cost_REN' : CRN,
+                          'Cost_NG' : CNG,
+                          'Cost_OIL' : CO,
+                          'Cost_COAL' : CCL,
+			              'RR_1' : RR1,
+			              'X_1' : X1,
+			              'Cost_CCS_1' : CCS1,
+			              'RR_2' : RR2,
+			              'X_2' : X2,
+			              'Cost_CCS_2' : CCS2,
+			              'FX_Cost_CCS_1' : FCCS1,
+			              'FX_Cost_CCS_2' : FCCS2,
                           'EP_NET_1_CI' : EP1I,
                           'EP_NET_2_CI' : EP2I,
                           'EP_NET_3_CI' : EP3I,
@@ -110,10 +166,7 @@ for (i,D,L,EP1I,EP2I,EP3I,CEP1,CEP2,CEP3,EC1I,EC2I,EC3I,CEC1,CEC2,CEC3,CI,CC,B) 
                           'EC_NET_3_CI' : EC3I,
                           'Cost_EC_NET_1' : CEC1,
                           'Cost_EC_NET_2' : CEC2,
-                          'Cost_EC_NET_3' : CEC3,
-                          'Comp_CI' : CI,
-                          'Cost_Comp' : CC,
-                          'Budget'    : B}
+                          'Cost_EC_NET_3' : CEC3}
     
 def EP_Period(plant_data,period_data): 
     model = pyo.ConcreteModel()
@@ -177,14 +230,20 @@ def EP_Period(plant_data,period_data):
     #This variable represents the minimum deployment of the third choice of EC_NETs for each period 
     model.EC_NET_3 = pyo.Var(domain = pyo.NonNegativeReals)
     
-    #This variable determines the minimum deployment of renewable compensatory energy for each period
-    model.comp = pyo.Var(domain = pyo.NonNegativeReals)
+    #This variable determines the minimum deployment of first choice of renewable compensatory energy for each period
+    model.comp_1 = pyo.Var(domain = pyo.NonNegativeReals)
+    
+    #This variable determines the minimum deployment of second choice of renewable compensatory energy for each period
+    model.comp_2 = pyo.Var(domain = pyo.NonNegativeReals)
 
     #This variable determines the final total CO2 emission after energy planning for each period
     model.new_emission = pyo.Var(domain = pyo.NonNegativeReals)
 
-    #This variable determines the total energy cost for each period
+    #This variable determines the total cost for each period
     model.sum_cost = pyo.Var(domain = pyo.NonNegativeReals)    
+    
+    #This variable determines the total energy cost for each period
+    model.energy_cost = pyo.Var(domain = pyo.NonNegativeReals)
           
     #OBJECTIVE FUNCTION
     
@@ -202,10 +261,10 @@ def EP_Period(plant_data,period_data):
     
     for s in model.S:
         #Calculation of carbon intensity for CCS retrofitted fossil-based sources
-        model.cons.add((model.plant_data[s]['CI'] * (1 - model.plant_data[s]['RR_1']) / (1 - model.plant_data[s]['X_1'])) == model.CI_RET_1[s])
+        model.cons.add((model.plant_data[s]['CI'] * (1 - model.period_data['RR_1']) / (1 - model.period_data['X_1'])) == model.CI_RET_1[s])
         
         #Calculation of carbon intensity for CCS retrofitted fossil-based sources
-        model.cons.add((model.plant_data[s]['CI'] * (1 - model.plant_data[s]['RR_2']) / (1 - model.plant_data[s]['X_2'])) == model.CI_RET_2[s])
+        model.cons.add((model.plant_data[s]['CI'] * (1 - model.period_data['RR_2']) / (1 - model.period_data['X_2'])) == model.CI_RET_2[s])
         
         #The deployment of energy source in power plant s should at least satisfy the lower bound
         model.cons.add(model.energy[s] >= model.plant_data[s]['LB'])
@@ -220,10 +279,10 @@ def EP_Period(plant_data,period_data):
         model.cons.add(model.CCS[s] <= model.energy[s])
         
         #Determine the net energy available from power plant s with CCS retrofit type 1
-        model.cons.add(model.CCS_1[s] * (1 - model.plant_data[s]['X_1']) == model.net_energy_CCS_1[s])
+        model.cons.add(model.CCS_1[s] * (1 - model.period_data['X_1']) == model.net_energy_CCS_1[s])
         
         #Determine the net energy available from power plant s with CCS retrofit type 2
-        model.cons.add(model.CCS_2[s] * (1 - model.plant_data[s]['X_2']) == model.net_energy_CCS_2[s])
+        model.cons.add(model.CCS_2[s] * (1 - model.period_data['X_2']) == model.net_energy_CCS_2[s])
         
 	    #If selected, the exent of CCS retrofit type 1 for power plant s is limited by the upper bound of the energy output 
         model.cons.add(model.CCS_1[s] <= model.plant_data[s]['UB'] * model.B[s])
@@ -239,10 +298,10 @@ def EP_Period(plant_data,period_data):
     
         if 'REN' in model.plant_data[s].values():
             model.CCS_1[s].fix(0)
-            model.CCS_2[s].fix(0)
-   
+            model.CCS_2[s].fix(0)       
+        
     #Total energy contribution from all energy sources to satisfy the total demand
-    model.cons.add(sum(((model.net_energy[s]) + model.net_energy_CCS_1[s] + model.net_energy_CCS_2[s]) for s in model.S) + model.comp + model.EP_NET_1 + model.EP_NET_2 + model.EP_NET_3 == model.period_data['Demand'] + model.EC_NET_1 + model.EC_NET_2 + model.EC_NET_3) 
+    model.cons.add(sum(((model.net_energy[s]) + model.net_energy_CCS_1[s] + model.net_energy_CCS_2[s]) for s in model.S) + model.comp_1 + model.comp_2 + model.EP_NET_1 + model.EP_NET_2 + model.EP_NET_3 == model.period_data['Demand'] + model.EC_NET_1 + model.EC_NET_2 + model.EC_NET_3) 
     
     #The total CO2 load contribution from all energy sources must satisfy most the CO2 emission limit after energy planning 
     model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['CI']) + (model.net_energy_CCS_1[s] * model.CI_RET_1[s]) + (model.net_energy_CCS_2[s] * model.CI_RET_2[s]) for s in model.S)
@@ -252,24 +311,38 @@ def EP_Period(plant_data,period_data):
                + (model.EP_NET_1 * model.period_data['EP_NET_1_CI'])
                + (model.EP_NET_2 * model.period_data['EP_NET_2_CI'])
                + (model.EP_NET_3 * model.period_data['EP_NET_3_CI'])
-               + (model.comp * model.period_data['Comp_CI']) == model.new_emission)
-
+               + (model.comp_1 * model.period_data['Comp_CI_1'])
+               + (model.comp_2 * model.period_data['Comp_CI_2']) == model.new_emission)
+    
+    energy_cost = 0
+    for s in model.S:
+        if 'REN' in model.plant_data[s].values():
+            energy_cost = energy_cost + (model.net_energy[s] * model.period_data['Cost_REN'])
+        elif 'NG' in model.plant_data[s].values():
+            energy_cost = energy_cost + (model.net_energy[s] * model.period_data['Cost_NG'])
+        elif 'OIL' in model.plant_data[s].values():
+            energy_cost = energy_cost + (model.net_energy[s] * model.period_data['Cost_OIL'])
+        else:
+            energy_cost = energy_cost + (model.net_energy[s] * model.period_data['Cost_COAL'])
+            
     #The summation of cost for each power plant s should equal to the total cost of each period
-    model.cons.add(sum((model.net_energy[s] * model.plant_data[s]['Cost']) + (model.net_energy_CCS_1[s] * model.plant_data[s]['Cost_CCS_1']) + (model.net_energy_CCS_2[s] * model.plant_data[s]['Cost_CCS_2']) + (model.plant_data[s]['FX_Cost_CCS_1'] * model.B[s]) + (model.plant_data[s]['FX_Cost_CCS_2'] * model.C[s]) for s in model.S)
+    model.cons.add(sum((model.net_energy_CCS_1[s] * model.period_data['Cost_CCS_1']) + (model.net_energy_CCS_2[s] * model.period_data['Cost_CCS_2']) + (model.period_data['FX_Cost_CCS_1'] * model.B[s]) + (model.period_data['FX_Cost_CCS_2'] * model.C[s]) for s in model.S)
                + (model.EC_NET_1 * model.period_data['Cost_EC_NET_1'])
                + (model.EC_NET_2 * model.period_data['Cost_EC_NET_2'])
                + (model.EC_NET_3 * model.period_data['Cost_EC_NET_3'])
                + (model.EP_NET_1 * model.period_data['Cost_EP_NET_1'])
                + (model.EP_NET_2 * model.period_data['Cost_EP_NET_2'])
                + (model.EP_NET_3 * model.period_data['Cost_EP_NET_3'])
-               + (model.comp * model.period_data['Cost_Comp']) == model.sum_cost) 
+               + (model.comp_1 * model.period_data['Cost_Comp_1'])
+               + (model.comp_2 * model.period_data['Cost_Comp_2'])
+               + energy_cost == model.sum_cost) 
     
     #Total CO2 load contribution from all energy sources to satisfy the emission limit
     if flag == 'min_budget':
         model.cons.add(model.new_emission == model.period_data['Emission_Limit'])
     else:
         model.cons.add(model.sum_cost <= model.period_data['Budget'])
-          
+
     return model
 
 #Creating a list with 3 strings
@@ -357,14 +430,14 @@ def EP_Results(plant_data, period_data, period):
         energy_planning.loc[s, 'Fuel'] = plant_data[s]['Fuel']
         energy_planning.loc[s, 'Energy'] = round(model.energy[s](), 2)
         energy_planning.loc[s, 'CI'] = plant_data[s]['CI']
-        energy_planning.loc[s, 'CCS_1 CI'] = round(model.CI_RET_1[s](), 3)
-        energy_planning.loc[s, 'CCS_2 CI'] = round(model.CI_RET_2[s](), 3)
+        #energy_planning.loc[s, 'CCS_1 CI'] = round(model.CI_RET_1[s](), 3)
+        #energy_planning.loc[s, 'CCS_2 CI'] = round(model.CI_RET_2[s](), 3)
         energy_planning.loc[s, 'CCS_1 Selection'] = model.B[s]()
         energy_planning.loc[s, 'CCS_2 Selection'] = model.C[s]()
         energy_planning.loc[s, 'CCS_1 Ret'] = round(model.CCS_1[s](), 2) 
         energy_planning.loc[s, 'CCS_2 Ret'] = round(model.CCS_2[s](), 2)       
-        energy_planning.loc[s, 'Net Energy wo CCS'] = round(model.net_energy[s](), 2)
-        energy_planning.loc[s, 'Net Energy w CCS'] = round(model.net_energy_CCS[s](), 2)
+        #energy_planning.loc[s, 'Net Energy wo CCS'] = round(model.net_energy[s](), 2)
+        #energy_planning.loc[s, 'Net Energy w CCS'] = round(model.net_energy_CCS[s](), 2)
         energy_planning.loc[s, 'Net Energy'] = round(model.net_energy[s]() + model.net_energy_CCS[s](), 2)
         energy_planning.loc[s, 'Carbon Load'] = round((model.net_energy[s]() * plant_data[s]['CI']) + (model.net_energy_CCS_1[s]() * model.CI_RET_1[s]()) + (model.net_energy_CCS_2[s]() * model.CI_RET_2[s]()), 2)
         
@@ -373,7 +446,13 @@ def EP_Results(plant_data, period_data, period):
     energy_planning.loc['EP_NET_3', 'Fuel'] = 'EP_NET_3'
     energy_planning.loc['EC_NET_1', 'Fuel'] = 'EC_NET_1'
     energy_planning.loc['EC_NET_2', 'Fuel'] = 'EC_NET_2' 
-    energy_planning.loc['EC_NET_3', 'Fuel'] = 'EC_NET_3'         
+    energy_planning.loc['EC_NET_3', 'Fuel'] = 'EC_NET_3' 
+    energy_planning.loc['EP_NET_1', 'CI'] = model.period_data['EP_NET_1_CI']
+    energy_planning.loc['EP_NET_2', 'CI'] = model.period_data['EP_NET_2_CI']
+    energy_planning.loc['EP_NET_3', 'CI'] = model.period_data['EP_NET_3_CI']
+    energy_planning.loc['EC_NET_1', 'CI'] = model.period_data['EC_NET_1_CI']
+    energy_planning.loc['EC_NET_2', 'CI'] = model.period_data['EC_NET_2_CI'] 
+    energy_planning.loc['EC_NET_3', 'CI'] = model.period_data['EC_NET_3_CI']        
     energy_planning.loc['EP_NET_1', 'Net Energy'] = round(model.EP_NET_1(), 2)
     energy_planning.loc['EP_NET_2', 'Net Energy'] = round(model.EP_NET_2(), 2)
     energy_planning.loc['EP_NET_3', 'Net Energy'] = round(model.EP_NET_3(), 2)
@@ -386,9 +465,14 @@ def EP_Results(plant_data, period_data, period):
     energy_planning.loc['EC_NET_1', 'Carbon Load'] = round(model.EC_NET_1() * model.period_data['EC_NET_1_CI'], 2)
     energy_planning.loc['EC_NET_2', 'Carbon Load'] = round(model.EC_NET_2() * model.period_data['EC_NET_2_CI'], 2)
     energy_planning.loc['EC_NET_3', 'Carbon Load'] = round(model.EC_NET_3() * model.period_data['EC_NET_3_CI'], 2)
-    energy_planning.loc['COMP', 'Fuel'] = 'COMP'  
-    energy_planning.loc['COMP', 'Net Energy'] = round(model.comp(),2) 
-    energy_planning.loc['COMP', 'Carbon Load'] = round(model.comp() * model.period_data['Comp_CI'], 2)
+    energy_planning.loc['COMP_1', 'Fuel'] = 'COMP_1'  
+    energy_planning.loc['COMP_2', 'Fuel'] = 'COMP_2'
+    energy_planning.loc['COMP_1', 'CI'] = model.period_data['Comp_CI_1']  
+    energy_planning.loc['COMP_2', 'CI'] = model.period_data['Comp_CI_2']
+    energy_planning.loc['COMP_1', 'Net Energy'] = round(model.comp_1(),2) 
+    energy_planning.loc['COMP_1', 'Carbon Load'] = round(model.comp_1() * model.period_data['Comp_CI_1'], 2)
+    energy_planning.loc['COMP_2', 'Net Energy'] = round(model.comp_2(),2) 
+    energy_planning.loc['COMP_2', 'Carbon Load'] = round(model.comp_2() * model.period_data['Comp_CI_2'], 2)
     energy_planning.loc['TOTAL', 'Carbon Load'] = round(model.new_emission(), 2)
     energy_planning.loc['TOTAL', 'Cost'] = round(model.sum_cost(), 2)
     

@@ -1,5 +1,5 @@
 '''
-Created on 4th August 2021
+Created on 24th September 2021
 
 This script presents the mathematical optimisation formulation for an energy planning scenario in a specific geographical region or district.
 Renewable energy and fossil-based sources make up the power generation in a specific geographical region or district. 
@@ -10,10 +10,8 @@ This energy planning mathematical formulation may be optimised subject to either
 @author: Purusothmn, Dr Michael Short, Prof Dr Dominic C.Y.F.
 '''
 import os 
-'''
-The user would be required to alter the directory name according to one's requirement
-'''
-path = os.chdir(r'C:/Users/LENOVO/OneDrive - University of Nottingham Malaysia/The University of Nottingham/BC COP26 Trilateral Research Initiative/BCCOP26TrilateralProject') 
+
+path = os.chdir(r'COPY_PATHNAME_ AND_REPLACE_THIS_TEXT') 
 
 cwd = os.getcwd()
 
