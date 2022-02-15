@@ -284,22 +284,7 @@ def multiperiod_energy_planning(model, i):
             return model.CCS_2[i+1,s] >= model.CCS_2[i,s]
         
     model.Cons_11 = pyo.Constraint(i, model.S, rule = CCS_2_constraint)
-    '''
-    #If power plant s is decomissioned in a period, it should remain decommissioned at later periods 
-    def energy_constraint(model, i, s):
-        if i == numperiods - 1:
-            return pyo.Constraint.Skip
-        elif i <= model.plant[s]['OFF']-2:
-            return model.energy[i+1,s] >= model.energy[i,s]
-        elif i == model.plant[s]['OFF']:
-            return pyo.Constraint.Skip
-        #elif model.plant[s]['OFF'] < numperiods:
-            #return pyo.Constraint.Skip
-        else:
-            return model.energy[i+1,s] >= model.energy[i,s]
-        
-    model.Cons_12 = pyo.Constraint(i, model.S, rule = energy_constraint)   
-    '''
+    
     #If power plant s is decomissioned in a period, it should remain decommissioned at later periods 
     def energy_constraint(model, i, s):
         if i <= model.plant[s]['OFF'] - 2:
