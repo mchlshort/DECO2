@@ -1,5 +1,5 @@
 '''
-Created on 14th January 2022
+Created on 15th February 2022
 
 Energy Planning Scenario in Pyomo
 
@@ -38,7 +38,7 @@ from openpyxl import load_workbook
 cwd = os.getcwd()
 model = pyo.ConcreteModel()
 
-file_name = r'Optimal_Decarbonisation_User_Interface_10.xlsx'
+file_name = r'Optimal_Decarbonisation_User_Interface_11.xlsx'
 model.plant = pd.read_excel(file_name, sheet_name = 'PLANT_DATA', index_col = 0, header = 32, nrows = 7).to_dict()
 model.EP = pd.read_excel(file_name, sheet_name = 'ENERGY_PLANNING_DATA', index_col = 0, header = 7).to_dict()
 model.fuel = pd.read_excel(file_name, sheet_name = 'FUEL_COST_DATA', index_col = 0, header = 12).to_dict()
@@ -284,16 +284,16 @@ def multiperiod_energy_planning(model, i):
             return model.CCS_2[i+1,s] >= model.CCS_2[i,s]
         
     model.Cons_11 = pyo.Constraint(i, model.S, rule = CCS_2_constraint)
-    '''
+   
     #If power plant s is decomissioned in a period, it should remain decommissioned at later periods 
     def energy_constraint(model, i, s):
-        if i == numperiods - 1:
-            return pyo.Constraint.Skip
-        else:
+        if i <= model.plant[s]['OFF'] - 2:
             return model.energy[i+1,s] >= model.energy[i,s]
+        else:
+            return pyo.Constraint.Skip
         
-    model.Cons_12 = pyo.Constraint(i, model.S, rule = energy_constraint)   
-    '''
+    model.Cons_12 = pyo.Constraint(i, model.S, rule = energy_constraint)
+    
     #Determine the net energy available from power plant s with CCS technology 1 for period i
     def CCS_1_net_energy(model, i, s):
        return model.CCS_1[i,s] * (1 - model.CCS_data['X_1'][i]) == model.net_energy_CCS_1[i,s]
@@ -646,7 +646,7 @@ def multiperiod_energy_planning(model, i):
             return model.new_emission[i] <= model.EP['Limit'][i]
         else:
             return model.sum_cost[i] <= model.EP['Budget'][i]
-
+    
     model.Cons_53 = pyo.Constraint(i, rule = objective_constraint)
     
     #opt = SolverFactory('octeract-engine', tee = True)
@@ -655,6 +655,7 @@ def multiperiod_energy_planning(model, i):
     opt = SolverFactory('gams')
     #sys.exit()
     results = opt.solve(model, solver = 'cplex')
+    
     print(results)
     #model.pprint()   
     return model
@@ -750,7 +751,7 @@ def multiperiod_energy_planning_results(model, i):
 
 model = multiperiod_energy_planning(model, periods)
 
+'''
 for i in list(range(1, numperiods,1)):
     multiperiod_energy_planning_results(model,i)
-    
-    
+'''    
