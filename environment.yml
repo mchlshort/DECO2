@@ -1,4 +1,4 @@
-name: Test
+name: Pyomo_v1
 channels:
   - conda-forge
   - anaconda
@@ -182,4 +182,4 @@ dependencies:
     - sympy==1.8
     - xlrd==2.0.1
     - xlsxwriter==1.4.5
-prefix: C:\Users\LENOVO\anaconda3\envs\Test
+prefix: C:\Users\LENOVO\anaconda3\envs\Pyomo_v1
