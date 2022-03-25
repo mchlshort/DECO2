@@ -38,7 +38,7 @@ from openpyxl import load_workbook
 cwd = os.getcwd()
 model = pyo.ConcreteModel()
 
-file_name = r'Base_User_Interface_Scenario_2.xlsx'
+file_name = r'Base_User_Interface.xlsx'
 model.plant = pd.read_excel(file_name, sheet_name = 'PLANT_DATA', index_col = 0, header = 32, nrows = 7).to_dict()
 model.EP = pd.read_excel(file_name, sheet_name = 'ENERGY_PLANNING_DATA', index_col = 0, header = 7).to_dict()
 model.fuel = pd.read_excel(file_name, sheet_name = 'FUEL_COST_DATA', index_col = 0, header = 12).to_dict()
