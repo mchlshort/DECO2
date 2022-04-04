@@ -38,7 +38,7 @@ from openpyxl import load_workbook
 cwd = os.getcwd()
 model = pyo.ConcreteModel()
 
-file_name = r'Base_User_Interface.xlsx'
+file_name = r'Base_User_Interface_Scenario_2.xlsx'
 model.plant = pd.read_excel(file_name, sheet_name = 'PLANT_DATA', index_col = 0, header = 32, nrows = 7).to_dict()
 model.EP = pd.read_excel(file_name, sheet_name = 'ENERGY_PLANNING_DATA', index_col = 0, header = 7).to_dict()
 model.fuel = pd.read_excel(file_name, sheet_name = 'FUEL_COST_DATA', index_col = 0, header = 12).to_dict()
@@ -779,7 +779,8 @@ def multiperiod_energy_planning_results(model, i):
     energy_planning.loc['TOTAL', 'Carbon Load'] = round(model.new_emission[i](), 2)
     energy_planning.loc['TOTAL', 'Cost'] = round(model.sum_cost[i](), 2)
             
-    writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a')
+    writer = pd.ExcelWriter(file_name, engine = 'openpyxl', mode = 'a', if_sheet_exists = 'new')
+    #writer = pd.ExcelWriter(file_name, mode = 'a', if_sheet_exists = 'new')
     energy_planning.to_excel(writer, sheet_name = 'Results_Period_1')
     writer.save()
     
@@ -788,7 +789,6 @@ def multiperiod_energy_planning_results(model, i):
 
 model = multiperiod_energy_planning(model, periods)
 
-'''
+
 for i in list(range(1, numperiods,1)):
     multiperiod_energy_planning_results(model,i)
-'''
