@@ -1,5 +1,5 @@
 '''
-Created on 11th February 2022
+Created on 12th May 2022
 
 Energy Planning Scenario in Pyomo
 
@@ -38,7 +38,7 @@ from openpyxl import load_workbook
 cwd = os.getcwd()
 model = pyo.ConcreteModel()
 
-file_name = r'Base_User_Interface_Scenario_2.xlsx'
+file_name = r'Base_User_Interface_Trial.xlsx'
 model.plant = pd.read_excel(file_name, sheet_name = 'PLANT_DATA', index_col = 0, header = 32, nrows = 7).to_dict()
 model.EP = pd.read_excel(file_name, sheet_name = 'ENERGY_PLANNING_DATA', index_col = 0, header = 7).to_dict()
 model.fuel = pd.read_excel(file_name, sheet_name = 'FUEL_COST_DATA', index_col = 0, header = 12).to_dict()
@@ -120,8 +120,20 @@ def multiperiod_energy_planning(model, i):
     model.M = pyo.Var(i, domain = pyo.Binary)
     
     #Binary variable for the deployment of MSW compensatory energy for period i 
-    model.N = pyo.Var(i, domain = pyo.Binary)      
+    model.N = pyo.Var(i, domain = pyo.Binary)    
     
+    #Binary variable for the deployment of alternative solid fuel technology 1 in power plant s for period i 
+    model.O = pyo.Var(i, model.S, domain = pyo.Binary)  
+    
+    #Binary variable for the deployment of alternative solid fuel technology 2 in power plant s for period i 
+    model.P = pyo.Var(i, model.S, domain = pyo.Binary)  
+    
+    #Binary variable for the deployment of alternative gas fuel technology 1 in power plant s for period i 
+    model.Q = pyo.Var(i, model.S, domain = pyo.Binary)  
+    
+    #Binary variable for the deployment of alternative gas fuel technology 2 in power plant s for period i 
+    model.R = pyo.Var(i, model.S, domain = pyo.Binary)  
+        
     #This variable represents the total deployment of CCS technology 1 & 2 in power plant s for period i
     model.CCS = pyo.Var(i, model.S, domain = pyo.NonNegativeReals)
     
@@ -214,11 +226,13 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_1 = pyo.Constraint(i, model.S, rule = demand)
     
+    
     #Calculation of carbon intensity of energy sources with CCS technology 1 in power plant s for period i
     def CCS_CI_1(model, i, s):
         return model.plant[s]['CI'] * (1 - model.CCS_data['RR_1'][i]) / (1 - model.CCS_data['X_1'][i]) == model.CI_RET_1[i,s]
     
     model.Cons_2 = pyo.Constraint(i, model.S, rule = CCS_CI_1)
+    
     
     #Calculation of carbon intensity of energy sources with CCS technology 2 in power plant s for period i
     def CCS_CI_2(model, i, s):
@@ -226,11 +240,13 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_3 = pyo.Constraint(i, model.S, rule = CCS_CI_2)
     
+    
     #The deployment of energy source in power plant s should at least satisfy the lower bound for period i
     def lower_bound_energy(model, i, s):
         return model.energy[i,s] >= model.plant[s]['LB'] * model.A[i,s]
         
     model.Cons_4 = pyo.Constraint(i, model.S, rule = lower_bound_energy)
+    
     
     #The deployment of energy source in power plant s should at most satisfy the upper bound for period i
     def upper_bound_energy(model, i, s):
@@ -238,6 +254,8 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_5 = pyo.Constraint(i, model.S, rule = upper_bound_energy)
     
+    
+    #There should not be power generation from power plant s before its commissioning period
     def plant_commission(model, i, s):
         if i < model.plant[s]['ON']:
             return model.energy[i,s] == 0
@@ -246,6 +264,8 @@ def multiperiod_energy_planning(model, i):
             
     model.Cons_6 = pyo.Constraint(i, model.S, rule = plant_commission)
     
+    
+    #There should be power generation from power plant s after its decommissioning period
     def plant_decommission(model, i, s):
         if i >= model.plant[s]['OFF']:
             #print(i,s,model.plant[s]['OFF'])
@@ -255,17 +275,20 @@ def multiperiod_energy_planning(model, i):
             
     model.Cons_7 = pyo.Constraint(i, model.S, rule = plant_decommission)
     
+    
     #The total CCS deployment in power plant s should be equal to summation of deployment of individual types of  CCS technology for period i
     def CCS_total(model, i, s):
         return model.CCS_1[i,s] + model.CCS_2[i,s] ==  model.CCS[i,s]
         
     model.Cons_8 = pyo.Constraint(i, model.S, rule = CCS_total)
     
+    
     #The total CCS deployment should be limited to the energy generation of power plant s for period i
     def CCS_limit_total(model, i, s):
         return model.CCS[i,s] <= model.energy[i,s]
     
     model.Cons_9 = pyo.Constraint(i, model.S, rule = CCS_limit_total)
+    
     
     #The deployment of CCS technology 1 at later periods should at least match the deployment in the previous period
     def CCS_1_constraint(model, i, s):
@@ -276,6 +299,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_10 = pyo.Constraint(i, model.S, rule = CCS_1_constraint)
     
+    
     #The deployment of CCS technology 2 at later periods should at least match the deployment in the previous period    
     def CCS_2_constraint(model, i, s):
         if i == numperiods - 1:
@@ -285,7 +309,9 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_11 = pyo.Constraint(i, model.S, rule = CCS_2_constraint)
     
-    #If power plant s is decomissioned in a period, it should remain decommissioned at later periods 
+    
+    #If power plant s is decomissioned in a period, it should remain decommissioned at later periods
+    #However, power plant s should be available for power generation till the period before its decommissioning period
     def energy_constraint(model, i, s):
         if i <= model.plant[s]['OFF'] - 2:
             return model.energy[i+1,s] >= model.energy[i,s]
@@ -294,24 +320,28 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_12 = pyo.Constraint(i, model.S, rule = energy_constraint)
     
+    
     #Determine the net energy available from power plant s with CCS technology 1 for period i
     def CCS_1_net_energy(model, i, s):
        return model.CCS_1[i,s] * (1 - model.CCS_data['X_1'][i]) == model.net_energy_CCS_1[i,s]
         
     model.Cons_13 = pyo.Constraint(i, model.S, rule = CCS_1_net_energy)
 
+    
     #Determine the net energy available from power plant s with CCS technology 2 for period i
     def CCS_2_net_energy(model, i, s):
         return model.CCS_2[i,s] * (1 - model.CCS_data['X_2'][i]) == model.net_energy_CCS_2[i,s]
         
     model.Cons_14 = pyo.Constraint(i, model.S, rule = CCS_2_net_energy)  
         
+    
     #If selected, the deployment of CCS technology 1 in power plant s is limited by the upper bound of the energy output for period i     
     def CCS_limit_1(model, i, s):
         return model.CCS_1[i,s] <= model.plant[s]['UB'] * model.B[i,s]
         
     model.Cons_15 = pyo.Constraint(i, model.S, rule = CCS_limit_1)
 	    
+    
     #If selected, the deployment of CCS technology 2 in power plant s is limited by the upper bound of the energy output for period i
     def CCS_limit_2(model, i, s):
         return model.CCS_2[i,s] <= model.plant[s]['UB'] * model.C[i,s]
@@ -325,6 +355,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_17 = pyo.Constraint(i, model.S, rule = CCS_net_energy)   
     
+    
     #The deployment of alternative solid fuel technology 1 at later periods should at least match the deployment in the previous period
     def alt_solid_1_constraint(model, i, s):
         if i == numperiods - 1:
@@ -333,6 +364,7 @@ def multiperiod_energy_planning(model, i):
             return model.solid_1[i+1,s] >= model.solid_1[i,s]
         
     model.Cons_18 = pyo.Constraint(i, model.S, rule = alt_solid_1_constraint)
+    
     
     #The deployment of alternative solid fuel technology 2 at later periods should at least match the deployment in the previous period    
     def alt_solid_2_constraint(model, i, s):
@@ -343,6 +375,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_19 = pyo.Constraint(i, model.S, rule = alt_solid_2_constraint)
     
+    
     #The deployment of alternative gas fuel technology 1 at later periods should at least match the deployment in the previous period
     def alt_gas_1_constraint(model, i, s):
         if i == numperiods - 1:
@@ -352,6 +385,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_20 = pyo.Constraint(i, model.S, rule = alt_gas_1_constraint)
     
+    
     #The deployment of alternative gas fuel technology 2 at later periods should at least match the deployment in the previous period    
     def alt_gas_2_constraint(model, i, s):
         if i == numperiods - 1:
@@ -360,6 +394,7 @@ def multiperiod_energy_planning(model, i):
             return model.gas_2[i+1,s] >= model.gas_2[i,s]
         
     model.Cons_21 = pyo.Constraint(i, model.S, rule = alt_gas_2_constraint)
+    
     
     #The total energy contribution must equal the initially determined energy contribution of power plant s for period i
     def fuel_substitution(model, i, s):
@@ -374,6 +409,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_22 = pyo.Constraint(i, model.S, rule = fuel_substitution)  
     
+    
     #If power plant s is fuelled by renewable energy sources, CCS technology 1 would not be deployed for period i
     def no_CCS_1(model, i, s):
         if 'REN' in model.plant[s].values():
@@ -382,6 +418,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
     
     model.Cons_23 = pyo.Constraint(i, model.S, rule = no_CCS_1) 
+    
     
     #If power plant s is fuelled by renewable energy sources, CCS technology 1 would not be deployed for period i
     def no_CCS_2(model, i, s):
@@ -392,6 +429,7 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_24 = pyo.Constraint(i, model.S, rule = no_CCS_2)  
     
+    
     #Technology implementation time for CCS technology 1
     def deployment_CCS_1(model, i, s):
         if model.TIME['CCS_1'][i] == 'NO':
@@ -400,6 +438,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
         
     model.Cons_25 = pyo.Constraint(i, model.S, rule = deployment_CCS_1)   
+    
     
     #Technology implementation time for CCS technology 2
     def deployment_CCS_2(model, i, s):
@@ -410,6 +449,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_26 = pyo.Constraint(i, model.S, rule = deployment_CCS_2)   
         
+    
     #Technology implementation time for EP-NETs technology 1
     def deployment_EP_NETs_1(model, i):
         if model.TIME['EP_NETs_1'][i] == 'NO':
@@ -418,6 +458,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
         
     model.Cons_27 = pyo.Constraint(i, rule = deployment_EP_NETs_1)   
+    
     
     #Technology implementation time for EP-NETs technology 2
     def deployment_EP_NETs_2(model, i):
@@ -428,6 +469,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_28 = pyo.Constraint(i, rule = deployment_EP_NETs_2) 
     
+    
     #Technology implementation time for EP-NETs technology 3
     def deployment_EP_NETs_3(model, i):
         if model.TIME['EP_NETs_3'][i] == 'NO':
@@ -436,6 +478,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
         
     model.Cons_29 = pyo.Constraint(i, rule = deployment_EP_NETs_3)
+    
     
     #Technology implementation time for EC-NETs technology 1
     def deployment_EC_NETs_1(model, i):
@@ -446,6 +489,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_30 = pyo.Constraint(i, rule = deployment_EC_NETs_1)   
     
+    
     #Technology implementation time for EC-NETs technology 2
     def deployment_EC_NETs_2(model, i):
         if model.TIME['EC_NETs_2'][i] == 'NO':
@@ -454,6 +498,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
         
     model.Cons_31 = pyo.Constraint(i, rule = deployment_EC_NETs_2) 
+    
     
     #Technology implementation time for EC-NETs technology 3
     def deployment_EC_NETs_3(model, i):
@@ -464,6 +509,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_32 = pyo.Constraint(i, rule = deployment_EC_NETs_3)
     
+    
     #Technology implementation time for solar compensatory energy
     def deployment_solar(model, i):
         if model.TIME['SOLAR'][i] == 'NO':
@@ -473,7 +519,8 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_33 = pyo.Constraint(i, rule = deployment_solar)
     
-    #Technology implementation time for hydro compensatory energy
+    
+    #Technology implementation time for hydropower compensatory energy
     def deployment_hydro(model, i):
         if model.TIME['HYDRO'][i] == 'NO':
             return model.K[i] == 0
@@ -481,6 +528,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
         
     model.Cons_34 = pyo.Constraint(i, rule = deployment_hydro)
+    
     
     #Technology implementation time for biomass compensatory energy
     def deployment_biomass(model, i):
@@ -491,6 +539,7 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_35 = pyo.Constraint(i, rule = deployment_biomass)
     
+    
     #Technology implementation time for biogas compensatory energy
     def deployment_biogas(model, i):
         if model.TIME['BIOGAS'][i] == 'NO':
@@ -499,6 +548,7 @@ def multiperiod_energy_planning(model, i):
             return pyo.Constraint.Skip
         
     model.Cons_36 = pyo.Constraint(i, rule = deployment_biogas)
+    
     
     #Technology implementation time for MSW compensatory energy
     def deployment_MSW(model, i):
@@ -509,41 +559,46 @@ def multiperiod_energy_planning(model, i):
         
     model.Cons_37 = pyo.Constraint(i, rule = deployment_MSW)
     
+    
     #Technology implementation time for alternative solid fuel type 1
     def deployment_alt_solid_1(model, i, s):
         if model.TIME['SOLID_1'][i] == 'NO':
-            return model.solid_1[i,s] == 0
+            return model.O[i,s] == 0
         else:
             return pyo.Constraint.Skip
         
     model.Cons_38 = pyo.Constraint(i, model.S, rule = deployment_alt_solid_1)
 
+    
     #Technology implementation time for alternative solid fuel type 2
     def deployment_alt_solid_2(model, i, s):
         if model.TIME['SOLID_2'][i] == 'NO':
-            return model.solid_2[i,s] == 0
+            return model.P[i,s] == 0
         else:
             return pyo.Constraint.Skip
         
     model.Cons_39 = pyo.Constraint(i, model.S, rule = deployment_alt_solid_2)
     
+    
     #Technology implementation time for alternative gas fuel type 1
     def deployment_alt_gas_1(model, i, s):
         if model.TIME['GAS_1'][i] == 'NO':
-            return model.gas_1[i,s] == 0
+            return model.Q[i,s] == 0
         else:
             return pyo.Constraint.Skip
         
     model.Cons_40 = pyo.Constraint(i, model.S, rule = deployment_alt_gas_1)
 
+    
     #Technology implementation time for alternative gas fuel type 2
     def deployment_alt_gas_2(model, i, s):
         if model.TIME['GAS_2'][i] == 'NO':
-            return model.gas_2[i,s] == 0
+            return model.R[i,s] == 0
         else:
             return pyo.Constraint.Skip
         
     model.Cons_41 = pyo.Constraint(i, model.S, rule = deployment_alt_gas_2)
+    
     
     #Big M formulation for EP-NETs technology 1 deployment for period i
     def big_M_EP_NETs_1(model, i):
@@ -551,11 +606,13 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_42 = pyo.Constraint(i, rule = big_M_EP_NETs_1) 
     
+    
     #Big M formulation for EP-NETs technology 2 deployment for period i
     def big_M_EP_NETs_2(model, i):
         return model.EP_NET_2[i] <= model.E[i] * 1000
     
     model.Cons_43 = pyo.Constraint(i, rule = big_M_EP_NETs_2) 
+    
     
     #Big M formulation for EP-NETs technology 3 deployment for period i
     def big_M_EP_NETs_3(model, i):
@@ -563,11 +620,13 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_44 = pyo.Constraint(i, rule = big_M_EP_NETs_3) 
 
+    
     #Big M formulation for EC-NETs technology 1 deployment for period i
     def big_M_EC_NETs_1(model, i):
         return model.EC_NET_1[i] <= model.G[i] * 1000
     
     model.Cons_45 = pyo.Constraint(i, rule = big_M_EC_NETs_1) 
+    
     
     #Big M formulation for EC-NETs technology 2 deployment for period i
     def big_M_EC_NETs_2(model, i):
@@ -575,11 +634,13 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_46 = pyo.Constraint(i, rule = big_M_EC_NETs_2) 
     
+    
     #Big M formulation for EC-NETs technology 3 deployment for period i
     def big_M_EC_NETs_3(model, i):
         return model.EC_NET_3[i] <= model.I[i] * 1000
     
     model.Cons_47 = pyo.Constraint(i, rule = big_M_EC_NETs_3) 
+    
     
     #Big M formulation for deployment of solar compensatory energy for period i
     def big_M_solar(model, i):
@@ -587,11 +648,13 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_48 = pyo.Constraint(i, rule = big_M_solar) 
     
+    
     #Big M formulation for deployment of hydro compensatory energy for period i
     def big_M_hydro(model, i):
         return model.comp_HYDRO[i] <= model.K[i] * 1000
     
     model.Cons_49 = pyo.Constraint(i, rule = big_M_hydro) 
+    
     
     #Big M formulation for deployment of BM compensatory energy for period i
     def big_M_biomass(model, i):
@@ -599,11 +662,13 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_50 = pyo.Constraint(i, rule = big_M_biomass) 
 
+    
     #Big M formulation for deployment of BG compensatory energy for period i
     def big_M_biogas(model, i):
         return model.comp_BG[i] <= model.M[i] * 1000
     
     model.Cons_51 = pyo.Constraint(i, rule = big_M_biogas) 
+    
     
     #Big M formulation for deployment of MSW compensatory energy for period i
     def big_M_MSW(model, i):
@@ -611,11 +676,41 @@ def multiperiod_energy_planning(model, i):
     
     model.Cons_52 = pyo.Constraint(i, rule = big_M_MSW) 
     
-     #Total energy contribution from all energy sources to satisfy the total demand for period i
+    
+    #Big M formulation for deployment of alternative solid fuel type 1 for period i
+    def big_M_alt_solid_1(model, i, s):
+        return model.solid_1[i,s] <= model.O[i,s] * model.plant[s]['UB']
+    
+    model.Cons_53 = pyo.Constraint(i, model.S, rule = big_M_alt_solid_1)
+    
+    
+    #Big M formulation for deployment of alternative solid fuel type 2 for period i
+    def big_M_alt_solid_2(model, i, s):
+        return model.solid_2[i,s] <= model.P[i,s] * model.plant[s]['UB']
+    
+    model.Cons_54 = pyo.Constraint(i, model.S, rule = big_M_alt_solid_2)
+    
+    
+    #Big M formulation for deployment of alternative gas fuel type 1 for period i
+    def big_M_alt_gas_1(model, i, s):
+        return model.gas_1[i,s] <= model.Q[i,s] * model.plant[s]['UB']
+    
+    model.Cons_55 = pyo.Constraint(i, model.S, rule = big_M_alt_gas_1)
+    
+    
+    #Big M formulation for deployment of alternative gas fuel type 2 for period i
+    def big_M_alt_gas_2(model, i, s):
+        return model.gas_2[i,s] <= model.R[i,s] * model.plant[s]['UB']
+    
+    model.Cons_56 = pyo.Constraint(i, model.S, rule = big_M_alt_gas_2)
+    
+    
+    #Total energy contribution from all energy sources to satisfy the total demand for period i
     def total_energy(model, i, s):
         return sum((model.net_energy[i,s] + model.net_energy_CCS_1[i,s] + model.net_energy_CCS_2[i,s] + model.solid_1[i,s] + model.solid_2[i,s] + model.gas_1[i,s] + model.gas_2[i,s]) for s in model.S) + model.comp_SOLAR[i] + model.comp_HYDRO[i] + model.comp_BM[i] + model.comp_BG[i] + model.comp_MSW[i] + model.EP_NET_1[i] + model.EP_NET_2[i] + model.EP_NET_3[i] == model.EP['Demand'][i] + model.EC_NET_1[i] + model.EC_NET_2[i] + model.EC_NET_3[i]
         
-    model.Cons_53 = pyo.Constraint(i, model.S, rule = total_energy)
+    model.Cons_57 = pyo.Constraint(i, model.S, rule = total_energy)
+    
     
     #The total CO2 load contribution from all energy sources must satisfy most the CO2 emission limit in period i
     def total_CO2_load(model, i, s):
@@ -634,8 +729,9 @@ def multiperiod_energy_planning(model, i):
         + (model.comp_BG[i] * model.COMP_CI['BIOGAS'][i]) 
         + (model.comp_MSW[i] * model.COMP_CI['MSW'][i]) == model.new_emission[i])
 
-    model.Cons_54 = pyo.Constraint(i, model.S, rule = total_CO2_load)
+    model.Cons_58 = pyo.Constraint(i, model.S, rule = total_CO2_load)
        
+    
     #Determining the cumulative total fuel and annualised capital cost for all power plants for period i
     def energy_cost(model, i, s):
         if 'SOLAR' in model.plant[s].values():
@@ -655,12 +751,14 @@ def multiperiod_energy_planning(model, i):
         else:
             return model.energy_cost[i,s] == (model.net_energy[i,s] * model.fuel['COAL'][i]) + (AFF * model.CPX_1['COAL'][i] * model.A[i,s]) + (AFF * model.energy[i,s] * model.CPX_2['COAL'][i])
     
-    model.Cons_55 = pyo.Constraint(i, model.S, rule = energy_cost)        
+    model.Cons_59 = pyo.Constraint(i, model.S, rule = energy_cost)        
+    
     
     #The summation of cost for each power plant s should equal to the total cost of each period i
     def sum_cost(model, i, s):
-        return (sum((model.net_energy_CCS_1[i,s] * model.CCS_data['Cost_CCS_1'][i]) + (model.net_energy_CCS_2[i,s] * model.CCS_data['Cost_CCS_2'][i]) + (model.CCS_data['FX_Cost_CCS_1'][i] * model.B[i,s]) 
-        + (model.CCS_data['FX_Cost_CCS_2'][i] * model.C[i,s]) + (model.solid_1[i,s] * model.SLD_COST['SOLID_1'][i]) + (model.solid_2[i,s] * model.SLD_COST['SOLID_2'][i]) + (model.gas_1[i,s] * model.GAS_COST['GAS_1'][i]) + (model.gas_2[i,s] * model.GAS_COST['GAS_2'][i]) for s in model.S)
+        return (sum((model.net_energy_CCS_1[i,s] * model.CCS_data['Cost_CCS_1'][i]) + (model.net_energy_CCS_2[i,s] * model.CCS_data['Cost_CCS_2'][i]) + (AFF * model.CCS_data['FX_Cost_CCS_1'][i] * model.B[i,s]) + (AFF * model.CCS_data['FX_Cost_CCS_2'][i] * model.C[i,s])
+        + (model.solid_1[i,s] * model.SLD_COST['SOLID_1'][i]) + (AFF * model.CPX_1['BIOMASS'][i] * model.O[i,s]) + (model.solid_2[i,s] * model.SLD_COST['SOLID_2'][i]) + (AFF * model.CPX_1['BIOMASS'][i] * model.P[i,s])
+        + (model.gas_1[i,s] * model.GAS_COST['GAS_1'][i]) + (AFF * model.CPX_1['BIOGAS'][i] * model.Q[i,s]) + (model.gas_2[i,s] * model.GAS_COST['GAS_2'][i]) + (AFF * model.CPX_1['BIOGAS'][i] * model.R[i,s]) for s in model.S)
         + (model.EC_NET_1[i] * model.NET_COST['EC_NETs_1'][i]) + (AFF * model.CPX_1['EC_NETs_1'][i] * model.G[i]) + (AFF * model.EC_NET_1[i] * model.CPX_2['EC_NETs_1'][i])
         + (model.EC_NET_2[i] * model.NET_COST['EC_NETs_2'][i]) + (AFF * model.CPX_1['EC_NETs_2'][i] * model.H[i]) + (AFF * model.EC_NET_2[i] * model.CPX_2['EC_NETs_2'][i])
         + (model.EC_NET_3[i] * model.NET_COST['EC_NETs_3'][i]) + (AFF * model.CPX_1['EC_NETs_3'][i] * model.I[i]) + (AFF * model.EC_NET_3[i] * model.CPX_2['EC_NETs_3'][i])
@@ -674,7 +772,8 @@ def multiperiod_energy_planning(model, i):
         + (model.comp_MSW[i] * model.COMP_COST['MSW'][i]) + (AFF * model.CPX_1['MSW'][i] * model.N[i]) + (AFF * model.comp_MSW[i] * model.CPX_2['MSW'][i])
         + sum(model.energy_cost[i,s] for s in model.S) == model.sum_cost[i])
         
-    model.Cons_56 = pyo.Constraint(i, model.S, rule = sum_cost)
+    model.Cons_60 = pyo.Constraint(i, model.S, rule = sum_cost)
+    
     
     #For the minimum budget objective function, the total cost is minimised, subject to the satisfaction of the CO2 emission limit
     #For the minimum emission objective function, the total emission is minimised, subject to the available budgetary constraint
@@ -684,7 +783,8 @@ def multiperiod_energy_planning(model, i):
         else:
             return model.sum_cost[i] <= model.EP['Budget'][i]
     
-    model.Cons_57 = pyo.Constraint(i, rule = objective_constraint)
+    model.Cons_61 = pyo.Constraint(i, rule = objective_constraint)
+    
     
     #opt = SolverFactory('octeract-engine', tee = True)
     #results = opt.solve(model)
@@ -708,15 +808,19 @@ def multiperiod_energy_planning_results(model, i):
         energy_planning.loc[s, 'CCS_1 CI'] = round(model.CI_RET_1[i,s](), 3)
         energy_planning.loc[s, 'CCS_2 CI'] = round(model.CI_RET_2[i,s](), 3)
         energy_planning.loc[s, 'CCS_1 Selection'] = model.B[i,s]()
-        energy_planning.loc[s, 'CCS_2 Selection'] = model.C[i,s]()
-        energy_planning.loc[s, 'CCS_1 Ret'] = round(model.CCS_1[i,s](), 2) 
+        energy_planning.loc[s, 'CCS_1 Ret'] = round(model.CCS_1[i,s](), 2)
+        energy_planning.loc[s, 'CCS_2 Selection'] = model.C[i,s]()         
         energy_planning.loc[s, 'CCS_2 Ret'] = round(model.CCS_2[i,s](), 2)       
         energy_planning.loc[s, 'Net Energy wo CCS'] = round(model.net_energy[i,s](), 2)
         energy_planning.loc[s, 'Net Energy w CCS_1'] = round(model.net_energy_CCS_1[i,s](), 2)
         energy_planning.loc[s, 'Net Energy w CCS_2'] = round(model.net_energy_CCS_2[i,s](), 2)
+        energy_planning.loc[s, 'Solid_1 Selection'] = model.O[i,s]()        
         energy_planning.loc[s, 'SOLID_1'] = round(model.solid_1[i,s](), 2)
+        energy_planning.loc[s, 'Solid_2 Selection'] = model.P[i,s]()
         energy_planning.loc[s, 'SOLID_2'] = round(model.solid_2[i,s](), 2)
+        energy_planning.loc[s, 'Gas_1 Selection'] = model.Q[i,s]() 
         energy_planning.loc[s, 'GAS_1'] = round(model.gas_1[i,s](), 2)
+        energy_planning.loc[s, 'Gas_2 Selection'] = model.R[i,s]()
         energy_planning.loc[s, 'GAS_2'] = round(model.gas_2[i,s](), 2)
         energy_planning.loc[s, 'Net Energy'] = round(model.net_energy[i,s]() + model.net_energy_CCS[i,s]() + model.solid_1[i,s]() + model.solid_2[i,s]() + model.gas_1[i,s]() + model.gas_2[i,s](), 2)
         energy_planning.loc[s, 'Carbon Load'] = round((model.net_energy[i,s]() * model.plant[s]['CI']) + (model.net_energy_CCS_1[i,s]() * model.CI_RET_1[i,s]()) + (model.net_energy_CCS_2[i,s]() * model.CI_RET_2[i,s]()) + (model.solid_1[i,s]() * model.SLD_CI['SOLID_1'][i]) + (model.solid_2[i,s]() * model.SLD_CI['SOLID_2'][i]) + (model.gas_1[i,s]() * model.GAS_CI['GAS_1'][i]) + (model.gas_2[i,s]() * model.GAS_CI['GAS_2'][i]), 2)
