@@ -38,7 +38,7 @@ from openpyxl import load_workbook
 cwd = os.getcwd()
 model = pyo.ConcreteModel()
 
-file_name = r'Base_User_Interface_Scenario_4.xlsx'
+file_name = r'Base_User_Interface_Scenario_2.xlsx'
 model.plant = pd.read_excel(file_name, sheet_name = 'PLANT_DATA', index_col = 0, header = 32, nrows = 7).to_dict()
 model.EP = pd.read_excel(file_name, sheet_name = 'ENERGY_PLANNING_DATA', index_col = 0, header = 7).to_dict()
 model.fuel = pd.read_excel(file_name, sheet_name = 'FUEL_COST_DATA', index_col = 0, header = 12).to_dict()
@@ -881,12 +881,12 @@ def multiperiod_energy_planning(model, i):
     #opt = SolverFactory('octeract-engine', tee = True)
     #results = opt.solve(model)
     
-    #opt = SolverFactory('gams')
+    opt = SolverFactory('gams')
     #sys.exit()
-    #results = opt.solve(model, solver = 'cplex')
+    results = opt.solve(model, solver = 'cplex')
     
-    opt = SolverFactory('gurobi', solver_io = 'python')
-    results = opt.solve(model)
+    #opt = SolverFactory('gurobi', solver_io = 'python')
+    #results = opt.solve(model)
     
     print(results)
     #model.pprint()   
@@ -988,6 +988,7 @@ def multiperiod_energy_planning_results(model, i):
 
 model = multiperiod_energy_planning(model, periods)
 
-
+'''
 for i in list(range(1, numperiods,1)):
     multiperiod_energy_planning_results(model,i)
+'''
