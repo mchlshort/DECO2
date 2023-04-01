@@ -1,4 +1,4 @@
-#DECO2: Direct Optimisation Model
+# DECO2: Direct Optimisation Model
 
 Direct Optimisation Model is developed as a standalone extension for DECO2 software. 
 Carbon trading model, having emission caps and prices as variables, is integrated into initial version of DECO2. 
